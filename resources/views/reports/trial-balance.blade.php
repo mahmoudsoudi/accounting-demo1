@@ -1,0 +1,56 @@
+@extends('layouts.app')
+
+@section('title', __('Trial Balance'))
+
+@section('content')
+<div class="mb-4">
+    <a href="{{ route('reports.index') }}" class="text-decoration-none">&larr; {{ __('Back to reports') }}</a>
+</div>
+
+<h1 class="h3 mb-4">{{ __('Trial Balance') }}</h1>
+
+<form method="GET" action="{{ route('reports.trial-balance') }}" class="row g-3 align-items-end mb-4">
+    <div class="col-md-4">
+        <label class="form-label" for="as_of">{{ __('As of') }}</label>
+        <input type="text" name="as_of" id="as_of" autocomplete="off" class="form-control datepicker" value="{{ $asOf }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">{{ __('Apply') }}</button>
+    </div>
+</form>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ __('Account') }}</th>
+                    <th class="text-end">{{ __('Debit') }}</th>
+                    <th class="text-end">{{ __('Credit') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @php $totalDr = $rows->sum('debit'); $totalCr = $rows->sum('credit'); @endphp
+                @forelse($rows as $row)
+                <tr>
+                    <td>{{ $row['account']->full_name }}</td>
+                    <td class="text-end">{{ number_format($row['debit'], 2) }}</td>
+                    <td class="text-end">{{ number_format($row['credit'], 2) }}</td>
+                </tr>
+                @empty
+                <tr><td colspan="3" class="text-center text-muted py-4">{{ __('No balances for selected date.') }}</td></tr>
+                @endforelse
+            </tbody>
+            @if($rows->isNotEmpty())
+            <tfoot class="table-light">
+                <tr>
+                    <th>{{ __('Totals') }}</th>
+                    <th class="text-end">{{ number_format($totalDr, 2) }}</th>
+                    <th class="text-end">{{ number_format($totalCr, 2) }}</th>
+                </tr>
+            </tfoot>
+            @endif
+        </table>
+    </div>
+</div>
+@endsection
