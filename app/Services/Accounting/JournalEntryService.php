@@ -2,189 +2,253 @@
 
 namespace App\Services\Accounting;
 
-use App\Models\Account;
+use App\Enums\JournalEntryStatus;
+use App\Models\AuditLog;
 use App\Models\JournalEntry;
-use App\Models\JournalEntryLine;
+use App\Models\JournalLine;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 class JournalEntryService
 {
-    /**
-     * Create a new journal entry (draft or posted)
-     */
-    public function create(array $data, bool $post = false): JournalEntry
+    public function create(array $data, User $user): JournalEntry
     {
-        return DB::transaction(function () use ($data, $post) {
-            $this->validateLines($data['lines'] ?? []);
+        $this->assertLinesBalanced($data['lines'] ?? []);
 
-            $journalEntry = JournalEntry::create([
-                'entry_number' => $this->generateEntryNumber(),
-                'date' => $data['date'],
-                'description' => $data['description'] ?? null,
-                'status' => $post ? 'posted' : 'draft',
-                'posted_at' => $post ? now() : null,
-                'created_by' => auth()->id(),
+        return DB::transaction(function () use ($data, $user) {
+            $entry = JournalEntry::create([
+                'reference_number' => $data['reference_number'] ?? $this->generateReference(),
+                'transaction_date' => $data['transaction_date'],
+                'status' => JournalEntryStatus::Draft,
+                'notes' => $data['notes'] ?? null,
+                'attachment_path' => $data['attachment_path'] ?? null,
+                'created_by' => $user->id,
             ]);
 
-            $lines = $data['lines'] ?? [];
-            foreach ($lines as $lineData) {
-                if ((float) ($lineData['debit'] ?? 0) > 0 || (float) ($lineData['credit'] ?? 0) > 0) {
-                    JournalEntryLine::create([
-                        'journal_entry_id' => $journalEntry->id,
-                        'account_id' => $lineData['account_id'],
-                        'description' => $lineData['description'] ?? null,
-                        'debit' => $lineData['debit'] ?? 0,
-                        'credit' => $lineData['credit'] ?? 0,
-                    ]);
-                }
-            }
+            $this->associateReferenceable($entry, $data['referenceable'] ?? null);
+            $this->syncLines($entry, $data['lines'] ?? []);
+            $this->logAudit($entry, $user, 'created', null, $entry->toArray());
 
-            return $journalEntry;
+            return $entry->load('lines.account');
         });
     }
 
-    /**
-     * Post a draft journal entry
-     */
-    public function post(JournalEntry $journalEntry): JournalEntry
+    public function update(JournalEntry $entry, array $data, User $user): JournalEntry
     {
-        return DB::transaction(function () use ($journalEntry) {
-            if ($journalEntry->status !== 'draft') {
-                throw ValidationException::withMessages([
-                    'status' => 'Only draft entries can be posted.',
-                ]);
-            }
+        if ($entry->status !== JournalEntryStatus::Draft) {
+            throw new InvalidArgumentException(__('Only draft journal entries can be edited.'));
+        }
 
-            $journalEntry->load('lines');
-            $this->validateLines($journalEntry->lines->toArray());
+        return DB::transaction(function () use ($entry, $data, $user) {
+            $old = $entry->toArray();
 
-            $journalEntry->update([
-                'status' => 'posted',
-                'posted_at' => now(),
+            $entry->update([
+                'transaction_date' => $data['transaction_date'] ?? $entry->transaction_date,
+                'notes' => $data['notes'] ?? $entry->notes,
+                'attachment_path' => $data['attachment_path'] ?? $entry->attachment_path,
             ]);
 
-            return $journalEntry;
+            if (isset($data['lines'])) {
+                $this->assertLinesBalanced($data['lines']);
+                $this->syncLines($entry, $data['lines']);
+            }
+
+            $this->logAudit($entry, $user, 'updated', $old, $entry->fresh()->toArray());
+
+            return $entry->load('lines.account');
         });
     }
 
-    /**
-     * Reverse a posted journal entry
-     */
-    public function reverse(JournalEntry $journalEntry): JournalEntry
+    public function post(JournalEntry $entry, User $user): JournalEntry
     {
-        return DB::transaction(function () use ($journalEntry) {
-            if ($journalEntry->status !== 'posted') {
-                throw ValidationException::withMessages([
-                    'status' => 'Only posted entries can be reversed.',
-                ]);
-            }
+        $entry->load('lines');
 
-            if ($journalEntry->reversed_at) {
-                throw ValidationException::withMessages([
-                    'status' => 'This entry has already been reversed.',
-                ]);
-            }
+        if (! $entry->isBalanced()) {
+            throw new InvalidArgumentException(__('Journal entry must balance before posting.'));
+        }
 
-            $reversalEntry = JournalEntry::create([
-                'entry_number' => $this->generateEntryNumber(),
-                'date' => now()->toDateString(),
-                'description' => 'Reversal of ' . $journalEntry->entry_number,
-                'status' => 'posted',
+        if ($entry->lines->count() < 2) {
+            throw new InvalidArgumentException(__('Journal entry must have at least two line items.'));
+        }
+
+        $entry->update([
+            'status' => JournalEntryStatus::Posted,
+            'posted_at' => now(),
+        ]);
+
+        $this->logAudit($entry, $user, 'posted', null, $entry->toArray());
+
+        return $entry;
+    }
+
+    public function approve(JournalEntry $entry, User $user): JournalEntry
+    {
+        if (! in_array($entry->status, [JournalEntryStatus::Posted, JournalEntryStatus::Draft])) {
+            throw new InvalidArgumentException(__('Only posted or draft entries can be approved.'));
+        }
+
+        if ($entry->status === JournalEntryStatus::Draft) {
+            $this->post($entry, $user);
+        }
+
+        $entry->update([
+            'status' => JournalEntryStatus::Approved,
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+        ]);
+
+        $this->logAudit($entry, $user, 'approved', null, $entry->toArray());
+
+        return $entry;
+    }
+
+    public function reverse(JournalEntry $entry, User $user, ?string $notes = null): JournalEntry
+    {
+        if ($entry->status !== JournalEntryStatus::Approved) {
+            throw new InvalidArgumentException(__('Only approved journal entries can be reversed.'));
+        }
+
+        return DB::transaction(function () use ($entry, $user, $notes) {
+            $entry->load('lines');
+
+            $reversal = JournalEntry::create([
+                'reference_number' => $this->generateReference('REV'),
+                'transaction_date' => now()->toDateString(),
+                'status' => JournalEntryStatus::Approved,
+                'notes' => $notes ?? __('Reversal of :ref', ['ref' => $entry->reference_number]),
+                'created_by' => $user->id,
+                'approved_by' => $user->id,
+                'approved_at' => now(),
                 'posted_at' => now(),
-                'reversal_of_id' => $journalEntry->id,
-                'created_by' => auth()->id(),
+                'reversal_of_id' => $entry->id,
+                'referenceable_type' => $entry->referenceable_type,
+                'referenceable_id' => $entry->referenceable_id,
             ]);
 
-            // Reverse each line
-            foreach ($journalEntry->lines as $line) {
-                JournalEntryLine::create([
-                    'journal_entry_id' => $reversalEntry->id,
+            foreach ($entry->lines as $index => $line) {
+                JournalLine::create([
+                    'journal_entry_id' => $reversal->id,
                     'account_id' => $line->account_id,
-                    'description' => $line->description,
+                    'description' => __('Reversal: :desc', ['desc' => $line->description]),
                     'debit' => $line->credit,
                     'credit' => $line->debit,
+                    'line_order' => $index + 1,
+                    'referenceable_type' => $line->referenceable_type,
+                    'referenceable_id' => $line->referenceable_id,
                 ]);
             }
 
-            // Mark original as reversed
-            $journalEntry->update([
+            $entry->update([
+                'status' => JournalEntryStatus::Reversed,
+                'reversed_by' => $user->id,
                 'reversed_at' => now(),
             ]);
 
-            return $reversalEntry;
+            $this->logAudit($entry, $user, 'reversed', null, ['reversal_id' => $reversal->id]);
+            $this->logAudit($reversal, $user, 'created_as_reversal', null, ['original_id' => $entry->id]);
+
+            return $reversal->load('lines.account', 'originalEntry');
         });
     }
 
-    /**
-     * Validate journal entry lines
-     */
-    protected function validateLines(array $lines): void
+    protected function assertLinesBalanced(array $lines): void
     {
-        if (count($lines) < 2) {
-            throw ValidationException::withMessages([
-                'lines' => 'A journal entry must have at least 2 lines.',
-            ]);
-        }
-
-        $totalDebit = 0;
-        $totalCredit = 0;
+        $totalDebits = 0.0;
+        $totalCredits = 0.0;
+        $linesWithAmounts = 0;
 
         foreach ($lines as $line) {
-            // Skip empty lines
-            if (!isset($line['account_id']) || empty($line['account_id'])) {
+            if (empty($line['account_id'])) {
                 continue;
-            }
-
-            $account = Account::find($line['account_id'] ?? null);
-            if (!$account) {
-                throw ValidationException::withMessages([
-                    'lines' => 'Invalid account selected.',
-                ]);
-            }
-
-            if (!$account->is_active) {
-                throw ValidationException::withMessages([
-                    'lines' => "Account '{$account->code}' is inactive.",
-                ]);
             }
 
             $debit = (float) ($line['debit'] ?? 0);
             $credit = (float) ($line['credit'] ?? 0);
 
-            // Both cannot be non-zero
-            if ($debit > 0 && $credit > 0) {
-                throw ValidationException::withMessages([
-                    'lines' => 'A line cannot have both debit and credit.',
-                ]);
-            }
+            $totalDebits += $debit;
+            $totalCredits += $credit;
 
-            // Both cannot be zero
-            if ($debit == 0 && $credit == 0) {
-                throw ValidationException::withMessages([
-                    'lines' => 'A line must have either debit or credit.',
-                ]);
+            if ($debit > 0 || $credit > 0) {
+                $linesWithAmounts++;
             }
-
-            $totalDebit += $debit;
-            $totalCredit += $credit;
         }
 
-        // Check balance
-        if (round($totalDebit, 2) !== round($totalCredit, 2)) {
-            throw ValidationException::withMessages([
-                'lines' => 'Total debit must equal total credit.',
+        if (round($totalDebits, 2) <= 0 && round($totalCredits, 2) <= 0) {
+            throw new InvalidArgumentException(__('Journal entry total must be greater than zero.'));
+        }
+
+        if ($linesWithAmounts < 2) {
+            throw new InvalidArgumentException(__('Journal entry must have at least two line items with amounts.'));
+        }
+
+        if (round($totalDebits, 2) !== round($totalCredits, 2)) {
+            throw new InvalidArgumentException(__('Journal entry must balance before saving. Debits (:debits) must equal credits (:credits).', [
+                'debits' => number_format($totalDebits, 2),
+                'credits' => number_format($totalCredits, 2),
+            ]));
+        }
+    }
+
+    protected function syncLines(JournalEntry $entry, array $lines): void
+    {
+        $entry->lines()->delete();
+
+        foreach ($lines as $index => $line) {
+            if (empty($line['account_id'])) {
+                continue;
+            }
+
+            JournalLine::create([
+                'journal_entry_id' => $entry->id,
+                'account_id' => $line['account_id'],
+                'description' => $line['description'] ?? null,
+                'debit' => (float) ($line['debit'] ?? 0),
+                'credit' => (float) ($line['credit'] ?? 0),
+                'line_order' => $index + 1,
+                'referenceable_type' => $this->resolveReferenceableType($line['referenceable'] ?? null),
+                'referenceable_id' => $this->resolveReferenceableId($line['referenceable'] ?? null),
             ]);
         }
     }
 
-    /**
-     * Generate entry number
-     */
-    protected function generateEntryNumber(): string
+    protected function associateReferenceable(JournalEntry $entry, mixed $referenceable): void
     {
-        $lastEntry = JournalEntry::latest('id')->first();
-        $nextId = ($lastEntry ? $lastEntry->id : 0) + 1;
-        return 'JE-' . str_pad((string) $nextId, 6, '0', STR_PAD_LEFT);
+        if (! $referenceable instanceof Model) {
+            return;
+        }
+
+        $entry->referenceable()->associate($referenceable);
+        $entry->save();
+    }
+
+    protected function resolveReferenceableType(mixed $referenceable): ?string
+    {
+        return $referenceable instanceof Model ? $referenceable->getMorphClass() : null;
+    }
+
+    protected function resolveReferenceableId(mixed $referenceable): ?int
+    {
+        return $referenceable instanceof Model ? $referenceable->getKey() : null;
+    }
+
+    protected function generateReference(string $prefix = 'JE'): string
+    {
+        return $prefix.'-'.now()->format('Ymd').'-'.str_pad((string) (JournalEntry::count() + 1), 4, '0', STR_PAD_LEFT);
+    }
+
+    protected function logAudit(JournalEntry $entry, User $user, string $action, ?array $old, ?array $new): void
+    {
+        AuditLog::create([
+            'auditable_type' => JournalEntry::class,
+            'auditable_id' => $entry->id,
+            'user_id' => $user->id,
+            'action' => $action,
+            'old_values' => $old,
+            'new_values' => $new,
+            'ip_address' => request()->ip(),
+            'created_at' => now(),
+        ]);
     }
 }

@@ -1,58 +1,243 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Accounting Laravel
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## What is this for?
 
-## About Laravel
+**Accounting Laravel** is a full accounting dashboard for **Canadian real estate brokerages**. It gives brokerage staff a single place to record transactions, manage clients and properties, and produce financial reports using proper double-entry bookkeeping.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+The goal is to provide a practical, auditable accounting system—not a mockup—tailored to brokerage workflows such as:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Commission income and agent payouts
+- Invoices, expenses, and payments (cash, bank, Stripe, credit card)
+- Trust/client funds, rental income, and property management
+- Mortgage amortization, taxes, insurance, and maintenance
+- Financial statements built from posted journal entries
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+The app supports **English and French**, with role-based access for **admin**, **manager**, and **accountant** users.
 
-## Learning Laravel
+## Tech stack
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- Laravel 13
+- PHP 8.3+
+- MySQL 8+ (recommended) or SQLite for local development
+- Blade templates with Bootstrap
+- Vite for frontend assets
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Installation
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### Requirements
 
-## Agentic Development
+- PHP 8.3+
+- Composer
+- Node.js and npm (for building assets)
+- MySQL 8+ (production / recommended local setup)
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Quick setup
+
+From the project root:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+cp .env.example .env
+php artisan key:generate
+npm install
+npm run build
+php artisan migrate --seed
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Or use the Composer shortcut, which runs the same steps:
 
-## Contributing
+```bash
+composer setup
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### MySQL database setup
 
-## Code of Conduct
+Create the database and user, then configure `.env`:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+mysql -uroot -e "
+  CREATE DATABASE IF NOT EXISTS accounting_laravel;
+  CREATE USER IF NOT EXISTS 'accounting_laravel'@'localhost';
+  GRANT ALL PRIVILEGES ON accounting_laravel.* TO 'accounting_laravel'@'localhost';
+  FLUSH PRIVILEGES;
+"
+```
 
-## Security Vulnerabilities
+In `.env`:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```env
+DB_CONNECTION=mysql
+DB_DATABASE=accounting_laravel
+DB_USERNAME=accounting_laravel
+DB_PASSWORD=
+```
+
+Then migrate and seed:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+### Demo data (optional)
+
+By default, `migrate --seed` loads only the essentials: roles, admin user, chart of accounts, and transaction templates. No clients, agents, deals, or journal history are created.
+
+To populate a **full year of sample brokerage activity** (agents, clients, properties, closed deals, rental income, expenses, and posted journal entries), use one of the options below.
+
+#### Option A — Environment variables (during migrate/seed)
+
+In `.env`:
+
+```env
+SEED_DEMO_DATA=true
+DEMO_DATA_YEAR=2025
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SEED_DEMO_DATA` | `false` | When `true`, `DatabaseSeeder` also runs `DemoDataSeeder` |
+| `DEMO_DATA_YEAR` | previous calendar year | Year to simulate (e.g. `2025`) |
+
+Then reset and seed:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+#### Option B — Artisan command (after migrate/seed)
+
+If the base seed data is already in place:
+
+```bash
+php artisan demo:seed-year
+php artisan demo:seed-year --year=2025
+php artisan demo:seed-year --force
+```
+
+`--force` removes existing demo records (tagged with `DEMO-` reference numbers and `demo-*@` emails) and regenerates them.
+
+Demo data includes roughly **27 closed deals**, **40+ invoices**, **35+ payments**, **30+ expenses**, and **180+ posted journal entries** spread across the year, with heavier activity in spring and summer. Demo invoices, payments, and expenses use `DEMO-INV-`, `DEMO-PAY-`, and `DEMO-EXP-` number prefixes.
+
+#### Reset to a clean database
+
+To remove all data—including demo records—and start fresh with **only** the base seed (no demo transactions):
+
+1. In `.env`, turn off demo seeding and use a production-style environment:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+SEED_DEMO_DATA=false
+```
+
+2. Wipe and reseed the database:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+This gives you a clean install: admin login, chart of accounts, and templates—but no sample clients, agents, properties, or journal entries.
+
+> **Note:** `php artisan demo:seed-year --force` replaces existing demo data with a new generated year. It does not leave you with an empty database. For a fully clean operational database, use `migrate:fresh --seed` with `SEED_DEMO_DATA=false`.
+
+### Default login
+
+After seeding, open [http://127.0.0.1:8000/login](http://127.0.0.1:8000/login):
+
+| Field    | Value   |
+|----------|---------|
+| Email    | `admin` |
+| Password | `admin` |
+
+## How to use
+
+### 1. Log in and explore the dashboard
+
+Sign in with the default admin account. The dashboard shows key financial metrics and links to the main modules.
+
+### 2. Set up your chart of accounts
+
+Go to **Accounts** to review or edit the seeded chart of accounts (40 accounts designed for Canadian brokerages). Accounts are organized by type: assets, liabilities, equity, revenue, cost of sales, and operating expenses.
+
+### 3. Record transactions
+
+Use any of these workflows:
+
+- **Journal entries** — Create manual entries with multiple debit/credit lines. Post, approve, or reverse entries as needed. All changes are audited.
+- **Transaction templates** — Apply one of 15 pre-built templates for common flows (invoice, expense, payment, commission, mortgage, rental, etc.).
+- **Invoices & expenses** — Create operational documents; managers approve expenses before they affect reporting.
+- **Payments** — Record payments with different methods (cash, bank transfer, Stripe, credit card).
+
+### 4. Manage brokerage data
+
+Add and maintain:
+
+- **Clients** — Buyers, sellers, and other parties
+- **Agents** — Sales agents and commission relationships
+- **Properties** — Listings and managed properties
+
+### 5. Run reports
+
+Under **Reports**, generate statements from posted and approved journal entries:
+
+- Balance Sheet, Income Statement (P&L), Cash Flow
+- Trial Balance, General Ledger, Journal Register
+- AR aging, expense summary, revenue by client/property/agent
+
+### 6. Use calculators
+
+The **Calculators** section includes:
+
+- Mortgage calculator
+- Rental income calculator
+- Commission calculator
+
+### 7. Switch language
+
+Use the locale switcher in the UI to toggle between **English** and **French**.
+
+### 8. Work with roles
+
+| Role       | Typical use |
+|------------|-------------|
+| **Admin**  | Full access; only role that can manage users |
+| **Manager**| Approve expenses and journal entries; reverse transactions; view reports |
+| **Accountant** | Create invoices, expenses, journal entries, and payments; cannot approve own transactions |
+
+See [docs/roles-and-permissions.md](docs/roles-and-permissions.md) for the full permission matrix.
+
+### Development server
+
+For local development with hot reload and logs:
+
+```bash
+composer dev
+```
+
+This starts the Laravel server, queue worker, log viewer, and Vite dev server together.
+
+## Running tests
+
+```bash
+php artisan test
+```
+
+Or:
+
+```bash
+composer test
+```
+
+## Documentation
+
+Additional design and implementation docs are in the `docs/` folder:
+
+- [playbook.md](docs/playbook.md) — Setup, architecture, and build order
+- [accounting-design.md](docs/accounting-design.md) — Journal entries, COA, templates, and financial statements
+- [roles-and-permissions.md](docs/roles-and-permissions.md) — Role definitions and authorization rules
+- [test-plan.md](docs/test-plan.md) — Test cases and acceptance criteria
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT

@@ -1,77 +1,83 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Accounting App')</title>
-    @vite(['resources/css/app.scss', 'resources/js/app.js'])
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', __('Dashboard')) - {{ config('app.name') }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.min.css" rel="stylesheet">
+    <style>
+        body { background: #f4f6f9; }
+        .sidebar { min-height: calc(100vh - 56px); background: #1e293b; }
+        .sidebar .nav-link { color: #cbd5e1; border-radius: .375rem; margin-bottom: .25rem; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background: #334155; color: #fff; }
+        .sidebar-toggle { display: flex; align-items: center; justify-content: space-between; }
+        .sidebar-chevron { font-size: 0.75rem; opacity: 0.7; transition: transform 0.2s; }
+        .sidebar-toggle[aria-expanded="true"] .sidebar-chevron { transform: rotate(90deg); }
+        .sidebar-submenu { padding-left: 0.5rem; margin-bottom: 0.25rem; border-left: 1px solid #334155; margin-left: 0.75rem; }
+        .sidebar-submenu .nav-link { font-size: 0.8125rem; padding: 0.3rem 0.65rem; color: #94a3b8; margin-bottom: 0.125rem; }
+        .sidebar-submenu .nav-link:hover, .sidebar-submenu .nav-link.active { background: #334155; color: #fff; }
+        .metric-card { border-left: 4px solid #0d6efd; }
+        .metric-card.success { border-left-color: #198754; }
+        .metric-card.warning { border-left-color: #ffc107; }
+        .metric-card.danger { border-left-color: #dc3545; }
+    </style>
+    @stack('styles')
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ route('dashboard') }}">Accounting App</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('dashboard') }}">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('accounting.accounts.index') }}">Accounts</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('accounting.journal-entries.index') }}">Journal Entries</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
-                            Reports
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
-                            <li><a class="dropdown-item" href="{{ route('accounting.reports.general-ledger') }}">General Ledger</a></li>
-                            <li><a class="dropdown-item" href="{{ route('accounting.reports.trial-balance') }}">Trial Balance</a></li>
-                            <li><a class="dropdown-item" href="{{ route('accounting.reports.profit-loss') }}">Profit & Loss</a></li>
-                            <li><a class="dropdown-item" href="{{ route('accounting.reports.balance-sheet') }}">Balance Sheet</a></li>
-                        </ul>
-                    </li>
-                </ul>
+            <a class="navbar-brand" href="{{ route('dashboard') }}">{{ config('app.name') }}</a>
+            <div class="d-flex align-items-center gap-3">
+                <div class="btn-group btn-group-sm">
+                    <a href="{{ route('locale.switch', 'en') }}" class="btn btn-outline-light {{ app()->getLocale() === 'en' ? 'active' : '' }}">EN</a>
+                    <a href="{{ route('locale.switch', 'fr') }}" class="btn btn-outline-light {{ app()->getLocale() === 'fr' ? 'active' : '' }}">FR</a>
+                </div>
+                @auth
+                    <span class="text-light small">{{ auth()->user()->name }} ({{ auth()->user()->role?->name }})</span>
+                    <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-light btn-sm">{{ __('Logout') }}</button>
+                    </form>
+                @endauth
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid mt-4">
-        @if ($message = Session::get('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ $message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-
-        @if ($message = Session::get('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {{ $message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-
-        @if ($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <strong>Please fix the following errors:</strong>
-                <ul class="mb-0 mt-2">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-
-        @yield('content')
+    <div class="container-fluid">
+        <div class="row">
+            @auth
+            <aside class="col-md-2 sidebar p-3">
+                @include('partials.sidebar')
+            </aside>
+            <main class="col-md-10 p-4">
+            @else
+            <main class="col-12 p-4">
+            @endauth
+                @if(session('success'))
+                    <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
+                @if($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+                @yield('content')
+            </main>
+        </div>
     </div>
 
-    <footer class="bg-light text-center py-3 mt-5 border-top">
-        <p class="text-muted mb-0">&copy; 2026 Minimal Accounting App. All rights reserved.</p>
-    </footer>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(function() { $('.datepicker').datepicker({ dateFormat: 'yy-mm-dd' }); });
+    </script>
+    @stack('scripts')
 </body>
 </html>
