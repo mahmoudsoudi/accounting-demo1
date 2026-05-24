@@ -81,5 +81,19 @@
     "Payment recorded.": "Payment recorded.",
     "Client created.": "Client created.",
     "Agent created.": "Agent created.",
-    "Property created.": "Property created."
+    "Property created.": "Property created.",
+    "Gross profit": "Gross profit",
+    "EBITDA": "EBITDA",
+    "EBIT": "EBIT",
+    "Earnings before tax (EBT)": "Earnings before tax (EBT)",
+    "Net income before tax": "Net income before tax",
+    "Net income after tax": "Net income after tax",
+    "Income tax expense": "Income tax expense",
+    "Interest expense": "Interest expense",
+    "Depreciation expense": "Depreciation expense",
+    "Amortization expense": "Amortization expense",
+    "Below EBITDA": "Below EBITDA",
+    "Income Statement Summary": "Income Statement Summary",
+    "Total operating expenses": "Total operating expenses",
+    "No activity": "No activity"
 }

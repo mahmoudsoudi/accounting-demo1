@@ -195,6 +195,42 @@ class TransactionTemplateSeeder extends Seeder
                     ['1020', 'credit', 'amount', 'Mortgage payment'],
                 ],
             ],
+            [
+                'name' => 'Income Tax Accrual',
+                'slug' => 'income_tax_accrual',
+                'description' => 'Accrue corporate income tax at year-end.',
+                'trigger_action_type' => 'income_tax_accrual',
+                'variables' => ['amount', 'fiscal_year'],
+                'links_to' => [],
+                'lines' => [
+                    ['6120', 'debit', 'amount', 'Income tax expense - FY {fiscal_year}'],
+                    ['2060', 'credit', 'amount', 'Income tax payable - FY {fiscal_year}'],
+                ],
+            ],
+            [
+                'name' => 'Income Tax Payment',
+                'slug' => 'income_tax_payment',
+                'description' => 'Pay corporate income tax to CRA.',
+                'trigger_action_type' => 'income_tax_payment',
+                'variables' => ['amount', 'fiscal_year'],
+                'links_to' => ['payment'],
+                'lines' => [
+                    ['2060', 'debit', 'amount', 'Income tax payment - FY {fiscal_year}'],
+                    ['1020', 'credit', 'amount', 'Bank payment - income tax'],
+                ],
+            ],
+            [
+                'name' => 'Income Tax Installment',
+                'slug' => 'income_tax_installment',
+                'description' => 'Record an income tax installment paid in advance.',
+                'trigger_action_type' => 'income_tax_installment',
+                'variables' => ['amount', 'fiscal_year'],
+                'links_to' => ['payment'],
+                'lines' => [
+                    ['1210', 'debit', 'amount', 'Income tax installment - FY {fiscal_year}'],
+                    ['1020', 'credit', 'amount', 'Bank payment - tax installment'],
+                ],
+            ],
         ];
 
         foreach ($templates as $templateData) {

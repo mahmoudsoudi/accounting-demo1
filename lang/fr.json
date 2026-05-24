@@ -81,5 +81,19 @@
     "Payment recorded.": "Paiement enregistré.",
     "Client created.": "Client créé.",
     "Agent created.": "Agent créé.",
-    "Property created.": "Propriété créée."
+    "Property created.": "Propriété créée.",
+    "Gross profit": "Profit brut",
+    "EBITDA": "BAIIA",
+    "EBIT": "BAII",
+    "Earnings before tax (EBT)": "Résultat avant impôts",
+    "Net income before tax": "Revenu net avant impôts",
+    "Net income after tax": "Revenu net après impôts",
+    "Income tax expense": "Charge d'impôt sur le revenu",
+    "Interest expense": "Charges d'intérêts",
+    "Depreciation expense": "Amortissement des immobilisations",
+    "Amortization expense": "Amortissement des actifs incorporels",
+    "Below EBITDA": "Sous le BAIIA",
+    "Income Statement Summary": "Sommaire du compte de résultat",
+    "Total operating expenses": "Total des charges d'exploitation",
+    "No activity": "Aucune activité"
 }

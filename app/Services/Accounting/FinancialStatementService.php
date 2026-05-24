@@ -13,6 +13,18 @@ use Illuminate\Support\Facades\DB;
 
 class FinancialStatementService
 {
+    /** @var list<string> */
+    private const INTEREST_EXPENSE_CODES = ['6070'];
+
+    /** @var list<string> */
+    private const DEPRECIATION_EXPENSE_CODES = ['6110'];
+
+    /** @var list<string> */
+    private const AMORTIZATION_EXPENSE_CODES = ['6115'];
+
+    /** @var list<string> */
+    private const INCOME_TAX_EXPENSE_CODES = ['6120'];
+
     public function trialBalance(?string $asOfDate = null): Collection
     {
         $balances = $this->accountBalances($asOfDate);
@@ -46,16 +58,61 @@ class FinancialStatementService
     {
         $balances = $this->accountBalances($endDate, $startDate);
 
+        $revenue = $this->filterByType($balances, AccountType::Revenue);
+        $costOfSales = $this->filterByType($balances, AccountType::CostOfSales);
+        $allExpenses = $this->filterByType($balances, AccountType::Expense);
+
+        $belowEbitdaCodes = array_merge(
+            self::INTEREST_EXPENSE_CODES,
+            self::DEPRECIATION_EXPENSE_CODES,
+            self::AMORTIZATION_EXPENSE_CODES,
+            self::INCOME_TAX_EXPENSE_CODES,
+        );
+
+        $operatingExpenses = $allExpenses->filter(
+            fn ($row) => ! in_array($row['account']->code, $belowEbitdaCodes, true)
+        )->values();
+        $interestExpense = $this->filterByAccountCodes($allExpenses, self::INTEREST_EXPENSE_CODES);
+        $depreciationExpense = $this->filterByAccountCodes($allExpenses, self::DEPRECIATION_EXPENSE_CODES);
+        $amortizationExpense = $this->filterByAccountCodes($allExpenses, self::AMORTIZATION_EXPENSE_CODES);
+        $incomeTaxExpense = $this->filterByAccountCodes($allExpenses, self::INCOME_TAX_EXPENSE_CODES);
+
+        $totalRevenue = $this->sumCollection($revenue);
+        $totalCostOfSales = $this->sumCollection($costOfSales);
+        $totalOperatingExpenses = $this->sumCollection($operatingExpenses);
+        $totalInterestExpense = $this->sumCollection($interestExpense);
+        $totalDepreciationExpense = $this->sumCollection($depreciationExpense);
+        $totalAmortizationExpense = $this->sumCollection($amortizationExpense);
+        $totalIncomeTaxExpense = $this->sumCollection($incomeTaxExpense);
+
+        $grossProfit = $totalRevenue - $totalCostOfSales;
+        $ebitda = $grossProfit - $totalOperatingExpenses;
+        $ebit = $ebitda - $totalDepreciationExpense - $totalAmortizationExpense;
+        $ebt = $ebit - $totalInterestExpense;
+        $netIncomeAfterTax = $ebt - $totalIncomeTaxExpense;
+
         return [
-            'revenue' => $this->filterByType($balances, AccountType::Revenue),
-            'cost_of_sales' => $this->filterByType($balances, AccountType::CostOfSales),
-            'expenses' => $this->filterByType($balances, AccountType::Expense),
-            'total_revenue' => $this->sumType($balances, AccountType::Revenue),
-            'total_cost_of_sales' => $this->sumType($balances, AccountType::CostOfSales),
-            'total_expenses' => $this->sumType($balances, AccountType::Expense),
-            'net_income' => $this->sumType($balances, AccountType::Revenue)
-                - $this->sumType($balances, AccountType::CostOfSales)
-                - $this->sumType($balances, AccountType::Expense),
+            'revenue' => $revenue,
+            'cost_of_sales' => $costOfSales,
+            'expenses' => $operatingExpenses,
+            'interest_expense' => $interestExpense,
+            'depreciation_expense' => $depreciationExpense,
+            'amortization_expense' => $amortizationExpense,
+            'income_tax_expense' => $incomeTaxExpense,
+            'total_revenue' => $totalRevenue,
+            'total_cost_of_sales' => $totalCostOfSales,
+            'gross_profit' => $grossProfit,
+            'total_expenses' => $totalOperatingExpenses,
+            'total_interest_expense' => $totalInterestExpense,
+            'total_depreciation_expense' => $totalDepreciationExpense,
+            'total_amortization_expense' => $totalAmortizationExpense,
+            'total_income_tax_expense' => $totalIncomeTaxExpense,
+            'ebitda' => $ebitda,
+            'ebit' => $ebit,
+            'ebt' => $ebt,
+            'net_income_before_tax' => $ebt,
+            'net_income_after_tax' => $netIncomeAfterTax,
+            'net_income' => $netIncomeAfterTax,
         ];
     }
 
@@ -219,5 +276,18 @@ class FinancialStatementService
     protected function sumType(Collection $balances, AccountType $type): float
     {
         return (float) $this->filterByType($balances, $type)->sum('balance');
+    }
+
+    protected function sumCollection(Collection $rows): float
+    {
+        return (float) $rows->sum('balance');
+    }
+
+    /**
+     * @param  list<string>  $codes
+     */
+    protected function filterByAccountCodes(Collection $balances, array $codes): Collection
+    {
+        return $balances->filter(fn ($row) => in_array($row['account']->code, $codes, true))->values();
     }
 }

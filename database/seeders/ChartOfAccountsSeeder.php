@@ -21,6 +21,7 @@ class ChartOfAccountsSeeder extends Seeder
             ['1100', 'Accounts Receivable', AccountType::Asset, '1000', NormalBalance::Debit, 'Trade receivables'],
             ['1110', 'Commission Receivable', AccountType::Asset, '1100', NormalBalance::Debit, 'Commissions due from deals'],
             ['1200', 'Prepaid Expenses', AccountType::Asset, '1000', NormalBalance::Debit, 'Prepaid insurance, taxes, etc.'],
+            ['1210', 'Income Tax Prepaid', AccountType::Asset, '1000', NormalBalance::Debit, 'Income tax installments paid in advance'],
             ['1300', 'Property & Equipment', AccountType::Asset, '1000', NormalBalance::Debit, 'Office and property assets'],
 
             // Liabilities
@@ -30,6 +31,7 @@ class ChartOfAccountsSeeder extends Seeder
             ['2030', 'Trust Funds Payable', AccountType::Liability, '2000', NormalBalance::Credit, 'Client trust obligations'],
             ['2040', 'GST/HST Payable', AccountType::Liability, '2000', NormalBalance::Credit, 'Sales tax collected'],
             ['2050', 'Credit Card Payable', AccountType::Liability, '2000', NormalBalance::Credit, 'Corporate credit card balance'],
+            ['2060', 'Income Tax Payable', AccountType::Liability, '2000', NormalBalance::Credit, 'Corporate income tax owed to CRA'],
             ['2100', 'Mortgage Payable', AccountType::Liability, '2000', NormalBalance::Credit, 'Mortgage principal owed'],
             ['2110', 'Mortgage Interest Payable', AccountType::Liability, '2000', NormalBalance::Credit, 'Accrued mortgage interest'],
 
@@ -63,6 +65,9 @@ class ChartOfAccountsSeeder extends Seeder
             ['6080', 'Professional Fees', AccountType::Expense, '6000', NormalBalance::Debit, 'Legal and accounting fees'],
             ['6090', 'Bank Charges', AccountType::Expense, '6000', NormalBalance::Debit, 'Bank service fees'],
             ['6100', 'Stripe Processing Fees', AccountType::Expense, '6000', NormalBalance::Debit, 'Payment processing fees'],
+            ['6110', 'Depreciation Expense', AccountType::Expense, '6000', NormalBalance::Debit, 'Depreciation of property and equipment'],
+            ['6115', 'Amortization Expense', AccountType::Expense, '6000', NormalBalance::Debit, 'Amortization of intangible assets'],
+            ['6120', 'Income Tax Expense', AccountType::Expense, '6000', NormalBalance::Debit, 'Corporate income tax for the period'],
         ];
 
         $codeToId = [];
