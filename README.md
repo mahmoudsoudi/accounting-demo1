@@ -2,7 +2,7 @@
 
 ## What is this for?
 
-**Accounting Laravel** is a full accounting dashboard for **Canadian real estate brokerages**. It gives brokerage staff a single place to record transactions, manage clients and properties, and produce financial reports using proper double-entry bookkeeping.
+**Accounting App in Laravel** is a full accounting dashboard for **Canadian real estate brokerages**. It gives brokerage staff a single place to record transactions, manage clients and properties, and produce financial reports using proper double-entry bookkeeping.
 
 The goal is to provide a practical, auditable accounting system—not a mockup—tailored to brokerage workflows such as:
 
