@@ -37,7 +37,12 @@ Route::middleware('auth')->group(function () {
     Route::post('journal-entries/{journal_entry}/reverse', [JournalEntryController::class, 'reverse'])->name('journal-entries.reverse');
 
     Route::get('templates', [TransactionTemplateController::class, 'index'])->name('templates.index');
+    Route::get('templates/create', [TransactionTemplateController::class, 'create'])->name('templates.create');
+    Route::post('templates', [TransactionTemplateController::class, 'store'])->name('templates.store');
     Route::get('templates/{template}', [TransactionTemplateController::class, 'show'])->name('templates.show');
+    Route::get('templates/{template}/edit', [TransactionTemplateController::class, 'edit'])->name('templates.edit');
+    Route::put('templates/{template}', [TransactionTemplateController::class, 'update'])->name('templates.update');
+    Route::delete('templates/{template}', [TransactionTemplateController::class, 'destroy'])->name('templates.destroy');
     Route::get('templates/{template}/apply', [TransactionTemplateController::class, 'applyForm'])->name('templates.apply');
     Route::post('templates/{template}/apply', [TransactionTemplateController::class, 'apply']);
 

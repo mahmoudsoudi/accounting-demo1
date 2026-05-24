@@ -64,7 +64,9 @@ class TransactionTemplateService
         $interest = (float) ($variables['interest'] ?? 0);
         $tax = (float) ($variables['tax'] ?? 0);
         $commissionRate = (float) ($variables['commission_rate'] ?? 0);
-        $agentAmount = (float) ($variables['agent_amount'] ?? ($amount * $commissionRate));
+        $agentAmount = isset($variables['agent_amount'])
+            ? (float) $variables['agent_amount']
+            : ($amount * ($commissionRate / 100));
 
         if ($principal + $interest > 0 && $amount === 0.0) {
             $amount = $principal + $interest;

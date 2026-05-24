@@ -3,7 +3,14 @@
 @section('title', __('Transaction Templates'))
 
 @section('content')
-<h1 class="h3 mb-4">{{ __('Transaction Templates') }}</h1>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h1 class="h3 mb-0">{{ __('Transaction Templates') }}</h1>
+    @can('create-accounting')
+        <a href="{{ route('templates.create') }}" class="btn btn-primary">{{ __('New template') }}</a>
+    @endcan
+</div>
+
+<p class="text-muted mb-4">{{ __('Reusable journal entry patterns. Create your own templates or apply a built-in one to generate balanced entries quickly.') }}</p>
 
 <div class="card">
     <div class="table-responsive">
@@ -30,9 +37,10 @@
                             <span class="badge bg-secondary">{{ __('No') }}</span>
                         @endif
                     </td>
-                    <td class="text-end">
+                    <td class="text-end text-nowrap">
                         <a href="{{ route('templates.show', $template) }}" class="btn btn-sm btn-outline-primary">{{ __('View') }}</a>
                         @can('create-accounting')
+                            <a href="{{ route('templates.edit', $template) }}" class="btn btn-sm btn-outline-secondary">{{ __('Edit') }}</a>
                             @if($template->is_active)
                                 <a href="{{ route('templates.apply', $template) }}" class="btn btn-sm btn-primary">{{ __('Apply') }}</a>
                             @endif

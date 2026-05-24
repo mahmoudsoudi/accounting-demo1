@@ -15,24 +15,28 @@
             <p class="mb-0">{{ $template->description }}</p>
         @endif
     </div>
-    @can('create-accounting')
-        @if($template->is_active)
-            <a href="{{ route('templates.apply', $template) }}" class="btn btn-primary">{{ __('Apply template') }}</a>
-        @endif
-    @endcan
+    <div class="d-flex flex-wrap gap-2">
+        @can('create-accounting')
+            <a href="{{ route('templates.edit', $template) }}" class="btn btn-outline-secondary">{{ __('Edit') }}</a>
+            @if($template->is_active)
+                <a href="{{ route('templates.apply', $template) }}" class="btn btn-primary">{{ __('Apply template') }}</a>
+            @endif
+        @endcan
+    </div>
 </div>
 
 <div class="card mb-4">
-    <div class="card-header">{{ __('Template variables') }}</div>
+    <div class="card-header">{{ __('Fields when applying') }}</div>
     <div class="card-body">
-        @if(is_array($template->variables) && count($template->variables))
+        @php($applicationVariables = $template->applicationVariables())
+        @if(count($applicationVariables))
             <ul class="mb-0">
-                @foreach($template->variables as $key => $meta)
-                    <li>{{ is_string($key) ? $key : ($meta['name'] ?? json_encode($meta)) }}</li>
+                @foreach($applicationVariables as $variable)
+                    <li>{{ \App\Support\TemplateVariable::label($variable) }} <code class="text-muted">{{ $variable }}</code></li>
                 @endforeach
             </ul>
         @else
-            <p class="text-muted mb-0">{{ __('No variable metadata.') }}</p>
+            <p class="text-muted mb-0">{{ __('Only transaction date and notes are required.') }}</p>
         @endif
     </div>
 </div>
