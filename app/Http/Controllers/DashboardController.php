@@ -11,6 +11,7 @@ use App\Models\JournalEntry;
 use App\Models\Payment;
 use App\Models\Property;
 use App\Services\Accounting\FinancialStatementService;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -19,19 +20,39 @@ class DashboardController extends Controller
         protected FinancialStatementService $financials
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $income = $this->financials->incomeStatement(
-            now()->startOfYear()->toDateString(),
-            now()->toDateString()
-        );
-        $balance = $this->financials->balanceSheet(now()->toDateString());
-        $cashFlow = $this->financials->cashFlow(
-            now()->startOfMonth()->toDateString(),
-            now()->toDateString()
-        );
+        $selectedYear = (int) $request->query('year', now()->year);
+        $currentYear = now()->year;
+
+        if ($selectedYear < 2000 || $selectedYear > $currentYear + 1) {
+            $selectedYear = $currentYear;
+        }
+
+        $startDate = "{$selectedYear}-01-01";
+        $endDate = $selectedYear === $currentYear
+            ? now()->toDateString()
+            : "{$selectedYear}-12-31";
+
+        $income = $this->financials->incomeStatement($startDate, $endDate);
+        $balance = $this->financials->balanceSheet($endDate);
+        $cashFlow = $this->financials->cashFlow($startDate, $endDate);
+
+        $availableYears = JournalEntry::query()
+            ->selectRaw('YEAR(transaction_date) as year')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year')
+            ->map(fn ($year) => (int) $year)
+            ->push($currentYear)
+            ->unique()
+            ->sortDesc()
+            ->values();
 
         return view('dashboard.index', [
+            'selectedYear' => $selectedYear,
+            'endDate' => $endDate,
+            'availableYears' => $availableYears,
             'totalRevenue' => $income['total_revenue'],
             'netIncome' => $income['net_income'],
             'totalAssets' => $balance['total_assets'],
@@ -40,7 +61,11 @@ class DashboardController extends Controller
             'pendingExpenses' => Expense::where('status', 'pending')->count(),
             'openInvoices' => Invoice::whereIn('status', ['sent', 'partial', 'overdue'])->count(),
             'draftJournals' => JournalEntry::where('status', 'draft')->count(),
-            'recentJournals' => JournalEntry::with('creator')->latest()->take(5)->get(),
+            'recentJournals' => JournalEntry::with('creator')
+                ->whereYear('transaction_date', $selectedYear)
+                ->latest()
+                ->take(5)
+                ->get(),
             'clientCount' => Client::count(),
             'agentCount' => Agent::count(),
             'propertyCount' => Property::count(),

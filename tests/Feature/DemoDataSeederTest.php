@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
 use App\Models\Payment;
+use App\Models\TrustTransaction;
 use App\Services\Accounting\FinancialStatementService;
 use Database\Seeders\DemoDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,6 +31,7 @@ class DemoDataSeederTest extends TestCase
         $this->assertGreaterThan(20, Invoice::where('invoice_number', 'like', 'DEMO-INV-%')->count());
         $this->assertGreaterThan(15, Payment::where('payment_number', 'like', 'DEMO-PAY-%')->count());
         $this->assertGreaterThan(15, Expense::where('expense_number', 'like', 'DEMO-EXP-%')->count());
+        $this->assertGreaterThan(20, TrustTransaction::where('trust_number', 'like', 'DEMO-TRU-%')->count());
         $this->assertGreaterThan(50, JournalEntry::count());
 
         $year = (int) now()->subYear()->year;

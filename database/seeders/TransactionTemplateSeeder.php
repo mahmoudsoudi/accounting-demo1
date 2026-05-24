@@ -231,6 +231,44 @@ class TransactionTemplateSeeder extends Seeder
                     ['1020', 'credit', 'amount', 'Bank payment - tax installment'],
                 ],
             ],
+            [
+                'name' => 'Trust Deposit',
+                'slug' => 'trust_deposit',
+                'description' => 'Record client funds received into trust.',
+                'trigger_action_type' => 'trust_deposit',
+                'variables' => ['amount', 'client', 'property'],
+                'links_to' => ['trust_transaction'],
+                'lines' => [
+                    ['1030', 'debit', 'amount', 'Trust deposit - {client}'],
+                    ['2030', 'credit', 'amount', 'Trust obligation - {client}'],
+                ],
+            ],
+            [
+                'name' => 'Trust Disbursement',
+                'slug' => 'trust_disbursement',
+                'description' => 'Disburse client trust funds.',
+                'trigger_action_type' => 'trust_disbursement',
+                'variables' => ['amount', 'client', 'property'],
+                'links_to' => ['trust_transaction'],
+                'lines' => [
+                    ['2030', 'debit', 'amount', 'Trust disbursement - {client}'],
+                    ['1030', 'credit', 'amount', 'Trust payout - {client}'],
+                ],
+            ],
+            [
+                'name' => 'Trust Transfer to Operating',
+                'slug' => 'trust_transfer_to_operating',
+                'description' => 'Transfer trust funds to operating bank on deal close.',
+                'trigger_action_type' => 'trust_transfer',
+                'variables' => ['amount', 'client', 'property'],
+                'links_to' => ['trust_transaction'],
+                'lines' => [
+                    ['2030', 'debit', 'amount', 'Trust liability cleared - {client}'],
+                    ['1030', 'credit', 'amount', 'Trust funds disbursed - {client}'],
+                    ['1020', 'debit', 'amount', 'Operating bank deposit - {property}'],
+                    ['4010', 'credit', 'amount', 'Commission from trust - {property}'],
+                ],
+            ],
         ];
 
         foreach ($templates as $templateData) {

@@ -3,13 +3,26 @@
 @section('title', __('Dashboard'))
 
 @section('content')
-<h1 class="h3 mb-4">{{ __('Accounting Dashboard') }}</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <h1 class="h3 mb-0">{{ __('Accounting Dashboard') }}</h1>
+    <form method="GET" action="{{ route('dashboard') }}" class="d-flex align-items-end gap-2">
+        <div>
+            <label class="form-label mb-1" for="year">{{ __('Year') }}</label>
+            <select name="year" id="year" class="form-select">
+                @foreach($availableYears as $year)
+                    <option value="{{ $year }}" @selected($year === $selectedYear)>{{ $year }}</option>
+                @endforeach
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ __('Apply') }}</button>
+    </form>
+</div>
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="card metric-card success">
             <div class="card-body">
-                <div class="text-muted small">{{ __('Total Revenue (YTD)') }}</div>
+                <div class="text-muted small">{{ __('Total Revenue') }} ({{ $selectedYear }})</div>
                 <div class="h4 mb-0">${{ number_format($totalRevenue, 2) }}</div>
             </div>
         </div>
@@ -17,7 +30,7 @@
     <div class="col-md-3">
         <div class="card metric-card">
             <div class="card-body">
-                <div class="text-muted small">{{ __('Net Income (YTD)') }}</div>
+                <div class="text-muted small">{{ __('Net Income') }} ({{ $selectedYear }})</div>
                 <div class="h4 mb-0">${{ number_format($netIncome, 2) }}</div>
             </div>
         </div>
@@ -25,7 +38,7 @@
     <div class="col-md-3">
         <div class="card metric-card warning">
             <div class="card-body">
-                <div class="text-muted small">{{ __('Total Assets') }}</div>
+                <div class="text-muted small">{{ __('Total Assets') }} ({{ __('as of') }} {{ $endDate }})</div>
                 <div class="h4 mb-0">${{ number_format($totalAssets, 2) }}</div>
             </div>
         </div>
@@ -33,7 +46,7 @@
     <div class="col-md-3">
         <div class="card metric-card danger">
             <div class="card-body">
-                <div class="text-muted small">{{ __('Net Cash Flow (MTD)') }}</div>
+                <div class="text-muted small">{{ __('Net Cash Flow') }} ({{ $selectedYear }})</div>
                 <div class="h4 mb-0">${{ number_format($netCashFlow, 2) }}</div>
             </div>
         </div>

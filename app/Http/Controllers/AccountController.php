@@ -3,12 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
+use App\Services\Accounting\FinancialStatementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AccountController extends Controller
 {
+    public function __construct(
+        protected FinancialStatementService $financials
+    ) {}
+
     public function index(): View
     {
         $accounts = Account::with('parent')->orderBy('code')->get();
@@ -41,6 +46,30 @@ class AccountController extends Controller
         Account::create($data);
 
         return redirect()->route('accounts.index')->with('success', __('Account created successfully.'));
+    }
+
+    public function show(Request $request, Account $account): View
+    {
+        $account->load([
+            'parent',
+            'children' => fn ($query) => $query->orderBy('code'),
+        ]);
+
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+
+        $rows = $this->financials->generalLedger($account->id, $startDate, $endDate);
+        $currentBalance = ($startDate || $endDate)
+            ? ($this->financials->generalLedger($account->id)->last()['running_balance'] ?? 0.0)
+            : ($rows->last()['running_balance'] ?? 0.0);
+
+        return view('accounts.show', [
+            'account' => $account,
+            'rows' => $rows,
+            'currentBalance' => $currentBalance,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ]);
     }
 
     public function edit(Account $account): View

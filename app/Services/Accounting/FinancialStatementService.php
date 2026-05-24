@@ -25,6 +25,9 @@ class FinancialStatementService
     /** @var list<string> */
     private const INCOME_TAX_EXPENSE_CODES = ['6120'];
 
+    /** @var list<string> */
+    private const TRUST_ACCOUNT_CODES = ['1030', '2030'];
+
     public function trialBalance(?string $asOfDate = null): Collection
     {
         $balances = $this->accountBalances($asOfDate);
@@ -218,6 +221,63 @@ class FinancialStatementService
             ', [$asOfDate ?? now()->toDateString(), $asOfDate ?? now()->toDateString(), $asOfDate ?? now()->toDateString(), $asOfDate ?? now()->toDateString()])
             ->groupBy('bucket')
             ->get();
+    }
+
+    public function trustFundReport(?string $startDate = null, ?string $endDate = null): array
+    {
+        $trustAccounts = Account::query()
+            ->whereIn('code', self::TRUST_ACCOUNT_CODES)
+            ->orderBy('code')
+            ->get();
+
+        $trustAsset = $trustAccounts->firstWhere('code', '1030');
+        $trustLiability = $trustAccounts->firstWhere('code', '2030');
+
+        $assetBalance = $trustAsset ? $this->accountBalance($trustAsset->id, $endDate) : 0.0;
+        $liabilityBalance = $trustLiability ? $this->accountBalance($trustLiability->id, $endDate) : 0.0;
+
+        $openingAsset = $trustAsset && $startDate
+            ? $this->accountBalance($trustAsset->id, date('Y-m-d', strtotime($startDate.' -1 day')))
+            : ($trustAsset ? $this->accountBalance($trustAsset->id) : 0.0);
+        $openingLiability = $trustLiability && $startDate
+            ? $this->accountBalance($trustLiability->id, date('Y-m-d', strtotime($startDate.' -1 day')))
+            : ($trustLiability ? $this->accountBalance($trustLiability->id) : 0.0);
+
+        $accountIds = $trustAccounts->pluck('id')->all();
+
+        return [
+            'trust_asset' => $trustAsset,
+            'trust_liability' => $trustLiability,
+            'asset_balance' => $assetBalance,
+            'liability_balance' => $liabilityBalance,
+            'opening_asset_balance' => $openingAsset,
+            'opening_liability_balance' => $openingLiability,
+            'shortfall_excess' => $assetBalance - $liabilityBalance,
+            'ledgers' => $accountIds
+                ? $this->generalLedgers($accountIds, $startDate, $endDate)
+                : collect(),
+        ];
+    }
+
+    public function accountBalance(int $accountId, ?string $asOfDate = null): float
+    {
+        $account = Account::findOrFail($accountId);
+
+        $query = JournalLine::query()
+            ->where('account_id', $account->id)
+            ->whereHas('journalEntry', function ($q) use ($asOfDate) {
+                $q->whereIn('status', [JournalEntryStatus::Posted->value, JournalEntryStatus::Approved->value]);
+                if ($asOfDate) {
+                    $q->whereDate('transaction_date', '<=', $asOfDate);
+                }
+            });
+
+        $debits = (float) (clone $query)->sum('debit');
+        $credits = (float) (clone $query)->sum('credit');
+
+        return $account->normal_balance === NormalBalance::Debit
+            ? $debits - $credits
+            : $credits - $debits;
     }
 
     public function journalRegister(?string $startDate = null, ?string $endDate = null): Collection

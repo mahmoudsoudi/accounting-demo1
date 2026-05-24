@@ -8,6 +8,8 @@ use App\Models\Client;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Property;
+use App\Models\TrustTransaction;
+use App\Enums\TrustTransactionType;
 use App\Services\Accounting\FinancialStatementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -142,6 +144,27 @@ class ReportController extends Controller
             'byClient' => Invoice::selectRaw('client_id, SUM(total) as total')->groupBy('client_id')->with('client')->get(),
             'byProperty' => Invoice::selectRaw('property_id, SUM(total) as total')->groupBy('property_id')->with('property')->get(),
             'byAgent' => Invoice::selectRaw('agent_id, SUM(total) as total')->groupBy('agent_id')->with('agent')->get(),
+        ]);
+    }
+
+    public function trustFund(Request $request): View
+    {
+        Gate::authorize('view-reports');
+
+        $startDate = $request->query('start_date', now()->startOfYear()->toDateString());
+        $endDate = $request->query('end_date', now()->toDateString());
+
+        $baseQuery = TrustTransaction::query()
+            ->whereDate('transaction_date', '>=', $startDate)
+            ->whereDate('transaction_date', '<=', $endDate);
+
+        return view('reports.trust-fund', [
+            'data' => $this->financials->trustFundReport($startDate, $endDate),
+            'transactions' => (clone $baseQuery)->with(['client', 'property'])->orderByDesc('transaction_date')->get(),
+            'periodDeposits' => (float) (clone $baseQuery)->where('transaction_type', TrustTransactionType::Deposit->value)->sum('amount'),
+            'periodDisbursements' => (float) (clone $baseQuery)->where('transaction_type', TrustTransactionType::Disbursement->value)->sum('amount'),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
         ]);
     }
 }

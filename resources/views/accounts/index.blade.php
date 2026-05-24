@@ -24,12 +24,23 @@
             </thead>
             <tbody>
                 @forelse($accounts as $account)
-                <tr>
+                <tr class="align-middle" role="link" tabindex="0"
+                    onclick="window.location='{{ route('accounts.show', $account) }}'"
+                    onkeydown="if (event.key === 'Enter') window.location='{{ route('accounts.show', $account) }}'"
+                    style="cursor: pointer;">
                     <td><code>{{ $account->code }}</code></td>
-                    <td>{{ $account->name }}</td>
+                    <td class="fw-medium">{{ $account->name }}</td>
                     <td>{{ $account->account_type->label() }}</td>
                     <td class="text-capitalize">{{ $account->normal_balance->value }}</td>
-                    <td>{{ $account->parent?->full_name ?? '—' }}</td>
+                    <td>
+                        @if($account->parent)
+                            <a href="{{ route('accounts.show', $account->parent) }}" class="text-decoration-none" onclick="event.stopPropagation()">
+                                {{ $account->parent->full_name }}
+                            </a>
+                        @else
+                            —
+                        @endif
+                    </td>
                     <td>
                         @if($account->is_active)
                             <span class="badge bg-success">{{ __('Active') }}</span>
@@ -38,7 +49,7 @@
                         @endif
                     </td>
                     <td class="text-end">
-                        <a href="{{ route('accounts.edit', $account) }}" class="btn btn-sm btn-outline-secondary">{{ __('Edit') }}</a>
+                        <a href="{{ route('accounts.edit', $account) }}" class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation()">{{ __('Edit') }}</a>
                     </td>
                 </tr>
                 @empty

@@ -32,7 +32,7 @@ class DemoDataSeeder extends Seeder
         $stats = app(BrokerageYearSimulator::class)->run($user, $year);
 
         $this->command?->info(sprintf(
-            'Demo data created: %d agents, %d clients, %d properties, %d closed deals, %d invoices, %d payments, %d expenses, %d journal entries.',
+            'Demo data created: %d agents, %d clients, %d properties, %d closed deals, %d invoices, %d payments, %d expenses, %d trust transactions, %d journal entries.',
             $stats['agents'],
             $stats['clients'],
             $stats['properties'],
@@ -40,6 +40,7 @@ class DemoDataSeeder extends Seeder
             $stats['invoices'],
             $stats['payments'],
             $stats['expenses'],
+            $stats['trust_transactions'],
             $stats['journal_entries'],
         ));
     }

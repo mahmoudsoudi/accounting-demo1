@@ -14,6 +14,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TransactionTemplateController;
+use App\Http\Controllers\TrustTransactionController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,7 +31,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::resource('accounts', AccountController::class)->except(['show', 'destroy']);
+    Route::resource('accounts', AccountController::class)->except(['destroy']);
     Route::resource('journal-entries', JournalEntryController::class);
     Route::post('journal-entries/{journal_entry}/post', [JournalEntryController::class, 'post'])->name('journal-entries.post');
     Route::post('journal-entries/{journal_entry}/approve', [JournalEntryController::class, 'approve'])->name('journal-entries.approve');
@@ -52,6 +53,8 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store']);
 
+    Route::resource('trust-transactions', TrustTransactionController::class)->only(['index', 'create', 'store', 'show']);
+
     Route::prefix('reports')->name('reports.')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('index');
         Route::get('/trial-balance', [ReportController::class, 'trialBalance'])->name('trial-balance');
@@ -63,6 +66,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/ar-aging', [ReportController::class, 'arAging'])->name('ar-aging');
         Route::get('/expense-summary', [ReportController::class, 'expenseSummary'])->name('expense-summary');
         Route::get('/revenue-by-dimension', [ReportController::class, 'revenueByDimension'])->name('revenue-by-dimension');
+        Route::get('/trust-fund', [ReportController::class, 'trustFund'])->name('trust-fund');
     });
 
     Route::prefix('calculators')->name('calculators.')->group(function () {

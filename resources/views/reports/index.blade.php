@@ -87,5 +87,14 @@
             </div>
         </div>
     </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6">{{ __('Trust Fund Report') }}</h2>
+                <p class="small text-muted mb-3">{{ __('Trust account balances, shortfall/excess, and activity.') }}</p>
+                <a href="{{ route('reports.trust-fund') }}" class="btn btn-sm btn-outline-primary">{{ __('Open') }}</a>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection

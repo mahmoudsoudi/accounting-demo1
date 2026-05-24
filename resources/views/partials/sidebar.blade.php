@@ -8,6 +8,7 @@
     <a class="nav-link {{ request()->routeIs('invoices.*') ? 'active' : '' }}" href="{{ route('invoices.index') }}">{{ __('Invoices') }}</a>
     <a class="nav-link {{ request()->routeIs('expenses.*') ? 'active' : '' }}" href="{{ route('expenses.index') }}">{{ __('Expenses') }}</a>
     <a class="nav-link {{ request()->routeIs('payments.*') ? 'active' : '' }}" href="{{ route('payments.index') }}">{{ __('Payments') }}</a>
+    <a class="nav-link {{ request()->routeIs('trust-transactions.*') ? 'active' : '' }}" href="{{ route('trust-transactions.index') }}">{{ __('Trust Transactions') }}</a>
 
     <small class="text-secondary text-uppercase mt-3 mb-1">{{ __('Real Estate') }}</small>
     <a class="nav-link {{ request()->routeIs('clients.*') ? 'active' : '' }}" href="{{ route('clients.index') }}">{{ __('Clients') }}</a>
@@ -37,6 +38,7 @@
             <a class="nav-link {{ request()->routeIs('reports.ar-aging') ? 'active' : '' }}" href="{{ route('reports.ar-aging') }}">{{ __('A/R Aging') }}</a>
             <a class="nav-link {{ request()->routeIs('reports.expense-summary') ? 'active' : '' }}" href="{{ route('reports.expense-summary') }}">{{ __('Expense Summary') }}</a>
             <a class="nav-link {{ request()->routeIs('reports.revenue-by-dimension') ? 'active' : '' }}" href="{{ route('reports.revenue-by-dimension') }}">{{ __('Revenue by Dimension') }}</a>
+            <a class="nav-link {{ request()->routeIs('reports.trust-fund') ? 'active' : '' }}" href="{{ route('reports.trust-fund') }}">{{ __('Trust Fund Report') }}</a>
         </nav>
     </div>
 

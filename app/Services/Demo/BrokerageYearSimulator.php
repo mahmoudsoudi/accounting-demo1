@@ -3,6 +3,7 @@
 namespace App\Services\Demo;
 
 use App\Enums\PaymentMethod;
+use App\Enums\TrustTransactionType;
 use App\Models\Account;
 use App\Models\Agent;
 use App\Models\Client;
@@ -13,6 +14,7 @@ use App\Models\Listing;
 use App\Models\Payment;
 use App\Models\Property;
 use App\Models\TransactionTemplate;
+use App\Models\TrustTransaction;
 use App\Models\User;
 use App\Services\Accounting\TransactionTemplateService;
 use App\Services\Calculators\CommissionCalculatorService;
@@ -53,6 +55,8 @@ class BrokerageYearSimulator
 
     protected int $expenseSequence = 0;
 
+    protected int $trustSequence = 0;
+
     protected ?Account $revenueAccount = null;
 
     protected ?Account $maintenanceAccount = null;
@@ -69,6 +73,7 @@ class BrokerageYearSimulator
         $this->invoiceSequence = 0;
         $this->paymentSequence = 0;
         $this->expenseSequence = 0;
+        $this->trustSequence = 0;
 
         $this->revenueAccount = Account::where('code', '4010')->first();
         $this->maintenanceAccount = Account::where('code', '6050')->first();
@@ -84,10 +89,12 @@ class BrokerageYearSimulator
             'invoices' => 0,
             'payments' => 0,
             'expenses' => 0,
+            'trust_transactions' => 0,
             'journal_entries' => 0,
         ];
 
         $stats['journal_entries'] += $this->simulateCommissionDeals($user, $year, $stats);
+        $stats['journal_entries'] += $this->simulatePendingTrustDeposits($user, $year, $stats);
         $stats['journal_entries'] += $this->simulateServiceInvoices($user, $year, $stats);
         $stats['journal_entries'] += $this->simulateRentalIncome($user, $year);
         $stats['journal_entries'] += $this->simulateOperatingExpenses($user, $year, $stats);
@@ -122,6 +129,13 @@ class BrokerageYearSimulator
         $this->expenseSequence++;
 
         return sprintf('DEMO-EXP-%d-%04d', $year, $this->expenseSequence);
+    }
+
+    protected function demoTrustNumber(int $year): string
+    {
+        $this->trustSequence++;
+
+        return sprintf('DEMO-TRU-%d-%04d', $year, $this->trustSequence);
     }
 
     protected function seedPeopleAndProperties(): void
@@ -199,6 +213,9 @@ class BrokerageYearSimulator
         $incomeTemplate = TransactionTemplate::where('slug', 'brokerage_commission_income')->firstOrFail();
         $payoutTemplate = TransactionTemplate::where('slug', 'agent_commission_payout')->firstOrFail();
         $paymentTemplate = TransactionTemplate::where('slug', 'invoice_payment_bank')->firstOrFail();
+        $depositTemplate = TransactionTemplate::where('slug', 'trust_deposit')->firstOrFail();
+        $transferTemplate = TransactionTemplate::where('slug', 'trust_transfer_to_operating')->firstOrFail();
+        $disbursementTemplate = TransactionTemplate::where('slug', 'trust_disbursement')->firstOrFail();
 
         $entriesCreated = 0;
         $propertyIndex = 0;
@@ -221,6 +238,33 @@ class BrokerageYearSimulator
 
                 $closeDate = Carbon::create($year, $month, random_int(1, 28));
                 $listedAt = $closeDate->copy()->subDays(random_int(30, 120));
+
+                $depositAmount = max(5000, round($salePrice * (random_int(10, 30) / 1000), -2));
+                $depositDate = $closeDate->copy()->subDays(random_int(30, 90));
+
+                $depositEntry = $this->templateService->apply($depositTemplate, [
+                    'amount' => $depositAmount,
+                    'client' => $client->full_name,
+                    'property' => $property->address,
+                    'transaction_date' => $depositDate->toDateString(),
+                    'notes' => "Earnest money deposit — {$property->address}",
+                ], $user, $this->demoReference('TRDEP', $depositDate));
+
+                $this->createTrustTransaction(
+                    user: $user,
+                    year: $year,
+                    client: $client,
+                    property: $property,
+                    transactionDate: $depositDate,
+                    amount: $depositAmount,
+                    type: TrustTransactionType::Deposit,
+                    journalEntryId: $depositEntry->id,
+                    paymentMethod: random_int(0, 1) ? PaymentMethod::Bank : PaymentMethod::Cheque,
+                    reference: 'DEP-'.str_pad((string) ($stats['trust_transactions'] + 1), 5, '0', STR_PAD_LEFT),
+                    notes: "Buyer earnest money — {$property->address}",
+                );
+                $stats['trust_transactions']++;
+                $entriesCreated++;
 
                 $listing = Listing::create([
                     'property_id' => $property->id,
@@ -280,6 +324,53 @@ class BrokerageYearSimulator
                 $entriesCreated++;
                 $stats['deals_closed']++;
 
+                if (random_int(0, 100) > 8) {
+                    $trustCloseDate = $closeDate->copy()->addDays(random_int(0, 2));
+                    $transferEntry = $this->templateService->apply($transferTemplate, [
+                        'amount' => $depositAmount,
+                        'client' => $client->full_name,
+                        'property' => $property->address,
+                        'transaction_date' => $trustCloseDate->toDateString(),
+                        'notes' => "Trust funds transferred on close — {$property->address}",
+                    ], $user, $this->demoReference('TRXFR', $trustCloseDate));
+
+                    $this->createTrustTransaction(
+                        user: $user,
+                        year: $year,
+                        client: $client,
+                        property: $property,
+                        transactionDate: $trustCloseDate,
+                        amount: $depositAmount,
+                        type: TrustTransactionType::Transfer,
+                        journalEntryId: $transferEntry->id,
+                        notes: "Deal close trust transfer — {$property->address}",
+                    );
+                } else {
+                    $refundDate = $closeDate->copy()->addDays(random_int(3, 14));
+                    $disbursementEntry = $this->templateService->apply($disbursementTemplate, [
+                        'amount' => $depositAmount,
+                        'client' => $client->full_name,
+                        'property' => $property->address,
+                        'transaction_date' => $refundDate->toDateString(),
+                        'notes' => "Trust deposit refunded — deal cancelled at {$property->address}",
+                    ], $user, $this->demoReference('TRDIS', $refundDate));
+
+                    $this->createTrustTransaction(
+                        user: $user,
+                        year: $year,
+                        client: $client,
+                        property: $property,
+                        transactionDate: $refundDate,
+                        amount: $depositAmount,
+                        type: TrustTransactionType::Disbursement,
+                        journalEntryId: $disbursementEntry->id,
+                        notes: "Buyer deposit returned — {$property->address}",
+                    );
+                }
+
+                $stats['trust_transactions']++;
+                $entriesCreated++;
+
                 if (random_int(0, 100) > 15) {
                     $paymentDate = $closeDate->copy()->addDays(random_int(14, 30));
                     $paymentEntry = $this->templateService->apply($paymentTemplate, [
@@ -320,6 +411,47 @@ class BrokerageYearSimulator
                     $entriesCreated++;
                 }
             }
+        }
+
+        return $entriesCreated;
+    }
+
+    protected function simulatePendingTrustDeposits(User $user, int $year, array &$stats): int
+    {
+        $depositTemplate = TransactionTemplate::where('slug', 'trust_deposit')->firstOrFail();
+        $entriesCreated = 0;
+
+        foreach (range(1, random_int(3, 5)) as $index) {
+            $property = $this->properties->random();
+            $client = $property->client;
+            $depositDate = Carbon::create($year, random_int(10, 12), random_int(1, 28));
+            $salePrice = (float) ($property->current_value ?? random_int(400, 900) * 1000);
+            $depositAmount = max(7500, round($salePrice * (random_int(15, 25) / 1000), -2));
+
+            $depositEntry = $this->templateService->apply($depositTemplate, [
+                'amount' => $depositAmount,
+                'client' => $client->full_name,
+                'property' => $property->address,
+                'transaction_date' => $depositDate->toDateString(),
+                'notes' => "Pending deal deposit — {$property->address}",
+            ], $user, $this->demoReference('TRPND', $depositDate));
+
+            $this->createTrustTransaction(
+                user: $user,
+                year: $year,
+                client: $client,
+                property: $property,
+                transactionDate: $depositDate,
+                amount: $depositAmount,
+                type: TrustTransactionType::Deposit,
+                journalEntryId: $depositEntry->id,
+                paymentMethod: PaymentMethod::ETransfer,
+                reference: 'PND-'.str_pad((string) ($index), 4, '0', STR_PAD_LEFT),
+                notes: "Open deal earnest money — closing expected Q1 ".($year + 1),
+            );
+
+            $stats['trust_transactions']++;
+            $entriesCreated++;
         }
 
         return $entriesCreated;
@@ -676,6 +808,34 @@ class BrokerageYearSimulator
             'created_by' => $user->id,
             'approved_by' => $approved ? $user->id : null,
             'approved_at' => $approved ? $expenseDate->copy()->addDays(random_int(1, 5)) : null,
+        ]);
+    }
+
+    protected function createTrustTransaction(
+        User $user,
+        int $year,
+        Client $client,
+        Property $property,
+        Carbon $transactionDate,
+        float $amount,
+        TrustTransactionType $type,
+        int $journalEntryId,
+        ?PaymentMethod $paymentMethod = null,
+        ?string $reference = null,
+        ?string $notes = null,
+    ): TrustTransaction {
+        return TrustTransaction::create([
+            'trust_number' => $this->demoTrustNumber($year),
+            'transaction_type' => $type,
+            'client_id' => $client->id,
+            'property_id' => $property->id,
+            'transaction_date' => $transactionDate,
+            'amount' => $amount,
+            'payment_method' => $paymentMethod,
+            'reference' => $reference,
+            'notes' => $notes,
+            'journal_entry_id' => $journalEntryId,
+            'created_by' => $user->id,
         ]);
     }
 }

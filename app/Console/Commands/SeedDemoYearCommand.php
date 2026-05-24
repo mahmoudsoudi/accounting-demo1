@@ -11,6 +11,7 @@ use App\Models\JournalEntry;
 use App\Models\Listing;
 use App\Models\Payment;
 use App\Models\Property;
+use App\Models\TrustTransaction;
 use App\Models\User;
 use App\Services\Demo\BrokerageYearSimulator;
 use Database\Seeders\ChartOfAccountsSeeder;
@@ -65,11 +66,12 @@ class SeedDemoYearCommand extends Command
                 ['Invoices', $stats['invoices']],
                 ['Payments', $stats['payments']],
                 ['Expenses', $stats['expenses']],
+                ['Trust transactions', $stats['trust_transactions']],
                 ['Journal entries', $stats['journal_entries']],
             ],
         );
 
-        $this->info('Done. Log in as admin/admin and check Invoices, Payments, Expenses, and Reports.');
+        $this->info('Done. Log in as admin/admin and check Invoices, Payments, Trust Transactions, Expenses, and Reports.');
 
         return self::SUCCESS;
     }
@@ -103,6 +105,7 @@ class SeedDemoYearCommand extends Command
         $demoPropertyIds = Property::whereIn('client_id', $demoClientIds)->pluck('id');
 
         Payment::where('payment_number', 'like', 'DEMO-PAY-%')->delete();
+        TrustTransaction::where('trust_number', 'like', 'DEMO-TRU-%')->delete();
         Invoice::where('invoice_number', 'like', 'DEMO-INV-%')->delete();
         Expense::where('expense_number', 'like', 'DEMO-EXP-%')->delete();
         JournalEntry::where('reference_number', 'like', 'DEMO-%')->delete();
