@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class Commission extends Model
 {
@@ -47,5 +48,10 @@ class Commission extends Model
     public function journalEntry(): BelongsTo
     {
         return $this->belongsTo(JournalEntry::class);
+    }
+
+    public function journalEntryReference(): MorphOne
+    {
+        return $this->morphOne(JournalEntry::class, 'referenceable');
     }
 }

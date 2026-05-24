@@ -92,7 +92,7 @@ class InvoiceController extends Controller
                 'client' => $client,
                 'property' => $invoice->property?->address ?? '',
                 'transaction_date' => $data['invoice_date'],
-            ], $request->user(), 'INV-JE-'.$invoice->invoice_number);
+            ], $request->user(), 'INV-JE-'.$invoice->invoice_number, $invoice);
             $invoice->update(['journal_entry_id' => $entry->id]);
         }
 

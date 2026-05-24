@@ -40,6 +40,11 @@
         <h1 class="h3 mb-1">{{ $entry->reference_number }}</h1>
         <span class="badge bg-secondary">{{ $entry->status->label() }}</span>
         <span class="text-muted ms-2">{{ $entry->transaction_date->format('Y-m-d') }}</span>
+        @if($entry->referenceable)
+            <div class="text-muted small mt-1">
+                {{ __('Source') }}: {{ class_basename($entry->referenceable) }} #{{ $entry->referenceable->getKey() }}
+            </div>
+        @endif
     </div>
 </div>
 
@@ -57,6 +62,7 @@
                         <tr>
                             <th>{{ __('Account') }}</th>
                             <th>{{ __('Description') }}</th>
+                            <th>{{ __('Reference') }}</th>
                             <th class="text-end">{{ __('Debit') }}</th>
                             <th class="text-end">{{ __('Credit') }}</th>
                         </tr>
@@ -66,6 +72,13 @@
                         <tr>
                             <td>{{ $line->account?->full_name ?? '—' }}</td>
                             <td>{{ $line->description ?? '—' }}</td>
+                            <td>
+                                @if($line->referenceable)
+                                    {{ class_basename($line->referenceable) }} #{{ $line->referenceable->getKey() }}
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td class="text-end">{{ number_format($line->debit, 2) }}</td>
                             <td class="text-end">{{ number_format($line->credit, 2) }}</td>
                         </tr>
@@ -73,7 +86,7 @@
                     </tbody>
                     <tfoot class="table-light">
                         <tr>
-                            <th colspan="2" class="text-end">{{ __('Totals') }}</th>
+                            <th colspan="3" class="text-end">{{ __('Totals') }}</th>
                             <th class="text-end">{{ number_format($entry->total_debits, 2) }}</th>
                             <th class="text-end">{{ number_format($entry->total_credits, 2) }}</th>
                         </tr>

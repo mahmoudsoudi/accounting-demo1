@@ -69,8 +69,10 @@
                 </table>
             </div>
 
+            <p id="journal-balance-status" class="small mb-0 text-danger">{{ __('Enter amounts on at least two lines. Debits must equal credits and total must be greater than zero.') }}</p>
+
             <div class="mt-4">
-                <button type="submit" class="btn btn-primary">{{ __('Save draft') }}</button>
+                <button type="submit" class="btn btn-primary" id="journal-save-btn" disabled>{{ __('Save draft') }}</button>
                 <a href="{{ route('journal-entries.index') }}" class="btn btn-outline-secondary">{{ __('Cancel') }}</a>
             </div>
         </form>
@@ -85,9 +87,12 @@
 @push('scripts')
 <script>
 (function() {
+    const form = document.getElementById('journal-entry-form');
     const body = document.getElementById('journal-lines-body');
     const template = document.getElementById('journal-line-template');
     const addBtn = document.getElementById('add-journal-line');
+    const statusEl = document.getElementById('journal-balance-status');
+    const submitBtn = document.getElementById('journal-save-btn');
 
     function nextIndex() {
         const inputs = body.querySelectorAll('select[name^="lines["]');
@@ -99,7 +104,7 @@
         return max + 1;
     }
 
-    function recalcTotals() {
+    function getTotals() {
         let d = 0, c = 0;
         body.querySelectorAll('.journal-debit').forEach(function(el) {
             d += parseFloat(el.value || 0);
@@ -107,8 +112,30 @@
         body.querySelectorAll('.journal-credit').forEach(function(el) {
             c += parseFloat(el.value || 0);
         });
+        return { d, c };
+    }
+
+    function recalcTotals() {
+        const { d, c } = getTotals();
         document.getElementById('journal-total-debit').textContent = d.toFixed(2);
         document.getElementById('journal-total-credit').textContent = c.toFixed(2);
+
+        const balanced = d.toFixed(2) === c.toFixed(2);
+        const nonZero = d > 0 && c > 0;
+
+        if (!nonZero) {
+            statusEl.textContent = @json(__('Enter amounts on at least two lines. Debits must equal credits and total must be greater than zero.'));
+            statusEl.className = 'small mb-0 text-danger';
+            submitBtn.disabled = true;
+        } else if (!balanced) {
+            statusEl.textContent = @json(__('Entry is out of balance. Debits must equal credits before saving.'));
+            statusEl.className = 'small mb-0 text-danger';
+            submitBtn.disabled = true;
+        } else {
+            statusEl.textContent = @json(__('Entry is balanced.'));
+            statusEl.className = 'small mb-0 text-success';
+            submitBtn.disabled = false;
+        }
     }
 
     function bindRow(row) {
@@ -125,6 +152,14 @@
 
     document.querySelectorAll('.journal-line-row').forEach(bindRow);
     recalcTotals();
+
+    form.addEventListener('submit', function(e) {
+        const { d, c } = getTotals();
+        if (d <= 0 || c <= 0 || d.toFixed(2) !== c.toFixed(2)) {
+            e.preventDefault();
+            recalcTotals();
+        }
+    });
 
     addBtn.addEventListener('click', function() {
         const html = template.innerHTML.replace(/__INDEX__/g, nextIndex());

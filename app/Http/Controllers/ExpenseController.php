@@ -85,7 +85,7 @@ class ExpenseController extends Controller
                     'amount' => $total,
                     'property' => $expense->property?->address ?? '',
                     'transaction_date' => $data['expense_date'],
-                ], $request->user(), 'EXP-JE-'.$expense->expense_number);
+                ], $request->user(), 'EXP-JE-'.$expense->expense_number, $expense);
                 $expense->update(['journal_entry_id' => $entry->id]);
             }
         }

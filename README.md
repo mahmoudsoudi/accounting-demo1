@@ -79,6 +79,68 @@ Then migrate and seed:
 php artisan migrate:fresh --seed
 ```
 
+### Demo data (optional)
+
+By default, `migrate --seed` loads only the essentials: roles, admin user, chart of accounts, and transaction templates. No clients, agents, deals, or journal history are created.
+
+To populate a **full year of sample brokerage activity** (agents, clients, properties, closed deals, rental income, expenses, and posted journal entries), use one of the options below.
+
+#### Option A — Environment variables (during migrate/seed)
+
+In `.env`:
+
+```env
+SEED_DEMO_DATA=true
+DEMO_DATA_YEAR=2025
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SEED_DEMO_DATA` | `false` | When `true`, `DatabaseSeeder` also runs `DemoDataSeeder` |
+| `DEMO_DATA_YEAR` | previous calendar year | Year to simulate (e.g. `2025`) |
+
+Then reset and seed:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+#### Option B — Artisan command (after migrate/seed)
+
+If the base seed data is already in place:
+
+```bash
+php artisan demo:seed-year
+php artisan demo:seed-year --year=2025
+php artisan demo:seed-year --force
+```
+
+`--force` removes existing demo records (tagged with `DEMO-` reference numbers and `demo-*@` emails) and regenerates them.
+
+Demo data includes roughly **27 closed deals**, **40+ invoices**, **35+ payments**, **30+ expenses**, and **180+ posted journal entries** spread across the year, with heavier activity in spring and summer. Demo invoices, payments, and expenses use `DEMO-INV-`, `DEMO-PAY-`, and `DEMO-EXP-` number prefixes.
+
+#### Reset to a clean database
+
+To remove all data—including demo records—and start fresh with **only** the base seed (no demo transactions):
+
+1. In `.env`, turn off demo seeding and use a production-style environment:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+SEED_DEMO_DATA=false
+```
+
+2. Wipe and reseed the database:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+This gives you a clean install: admin login, chart of accounts, and templates—but no sample clients, agents, properties, or journal entries.
+
+> **Note:** `php artisan demo:seed-year --force` replaces existing demo data with a new generated year. It does not leave you with an empty database. For a fully clean operational database, use `migrate:fresh --seed` with `SEED_DEMO_DATA=false`.
+
 ### Default login
 
 After seeding, open [http://127.0.0.1:8000/login](http://127.0.0.1:8000/login):

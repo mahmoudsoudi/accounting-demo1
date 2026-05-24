@@ -71,7 +71,7 @@ class PaymentController extends Controller
                 'amount' => $data['amount'],
                 'client' => $invoice->client?->full_name ?? 'Client',
                 'transaction_date' => $data['payment_date'],
-            ], $request->user(), 'PAY-JE-'.$payment->payment_number);
+            ], $request->user(), 'PAY-JE-'.$payment->payment_number, $payment);
             $payment->update(['journal_entry_id' => $entry->id]);
         }
 

@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\JournalEntry;
 use App\Models\TransactionTemplate;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
 class TransactionTemplateService
@@ -14,8 +15,13 @@ class TransactionTemplateService
         protected JournalEntryService $journalEntryService
     ) {}
 
-    public function apply(TransactionTemplate $template, array $variables, User $user, ?string $reference = null): JournalEntry
-    {
+    public function apply(
+        TransactionTemplate $template,
+        array $variables,
+        User $user,
+        ?string $reference = null,
+        ?Model $referenceable = null
+    ): JournalEntry {
         $template->load('lines');
         $accounts = Account::whereIn('code', $template->lines->pluck('account_code'))->get()->keyBy('code');
 
@@ -45,6 +51,7 @@ class TransactionTemplateService
             'transaction_date' => $variables['transaction_date'] ?? now()->toDateString(),
             'notes' => $variables['notes'] ?? $template->description,
             'lines' => $lines,
+            'referenceable' => $referenceable,
         ], $user);
 
         return $this->journalEntryService->post($entry, $user);

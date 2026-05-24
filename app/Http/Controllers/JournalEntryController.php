@@ -46,14 +46,18 @@ class JournalEntryController extends Controller
             'lines.*.credit' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $entry = $this->journalService->create($data, $request->user());
+        try {
+            $entry = $this->journalService->create($data, $request->user());
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->withErrors(['balance' => $e->getMessage()]);
+        }
 
         return redirect()->route('journal-entries.show', $entry)->with('success', __('Journal entry created.'));
     }
 
     public function show(JournalEntry $journalEntry): View
     {
-        $journalEntry->load(['lines.account', 'creator', 'approver', 'reverser', 'originalEntry', 'auditLogs.user']);
+        $journalEntry->load(['lines.account', 'lines.referenceable', 'referenceable', 'creator', 'approver', 'reverser', 'originalEntry', 'auditLogs.user']);
 
         return view('journal-entries.show', ['entry' => $journalEntry]);
     }
@@ -83,7 +87,11 @@ class JournalEntryController extends Controller
             'lines.*.credit' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $this->journalService->update($journalEntry, $data, $request->user());
+        try {
+            $this->journalService->update($journalEntry, $data, $request->user());
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->withErrors(['balance' => $e->getMessage()]);
+        }
 
         return redirect()->route('journal-entries.show', $journalEntry)->with('success', __('Journal entry updated.'));
     }

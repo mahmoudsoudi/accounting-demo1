@@ -17,5 +17,9 @@ class DatabaseSeeder extends Seeder
             ChartOfAccountsSeeder::class,
             TransactionTemplateSeeder::class,
         ]);
+
+        if (filter_var(env('SEED_DEMO_DATA', false), FILTER_VALIDATE_BOOL)) {
+            $this->call(DemoDataSeeder::class);
+        }
     }
 }

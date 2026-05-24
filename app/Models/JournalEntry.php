@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class JournalEntry extends Model
 {
@@ -23,6 +24,8 @@ class JournalEntry extends Model
         'reversed_at',
         'reversal_of_id',
         'posted_at',
+        'referenceable_type',
+        'referenceable_id',
     ];
 
     protected function casts(): array
@@ -69,6 +72,11 @@ class JournalEntry extends Model
     public function auditLogs(): MorphMany
     {
         return $this->morphMany(AuditLog::class, 'auditable');
+    }
+
+    public function referenceable(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     public function getTotalDebitsAttribute(): float

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\JournalEntryStatus;
 use App\Models\Account;
+use App\Models\Expense;
 use App\Models\JournalEntry;
 use App\Models\User;
 use App\Services\Accounting\JournalEntryService;
@@ -26,6 +27,41 @@ class JournalEntryTest extends TestCase
         $this->admin = User::where('email', 'admin')->first();
     }
 
+    public function test_journal_entry_rejects_unbalanced_on_create(): void
+    {
+        $accounts = Account::active()->take(2)->get();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(__('Journal entry must balance before saving. Debits (:debits) must equal credits (:credits).', [
+            'debits' => number_format(100, 2),
+            'credits' => number_format(50, 2),
+        ]));
+
+        $this->service->create([
+            'transaction_date' => now()->toDateString(),
+            'lines' => [
+                ['account_id' => $accounts[0]->id, 'debit' => 100, 'credit' => 0],
+                ['account_id' => $accounts[1]->id, 'debit' => 0, 'credit' => 50],
+            ],
+        ], $this->admin);
+    }
+
+    public function test_journal_entry_rejects_zero_total_on_create(): void
+    {
+        $accounts = Account::active()->take(2)->get();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(__('Journal entry total must be greater than zero.'));
+
+        $this->service->create([
+            'transaction_date' => now()->toDateString(),
+            'lines' => [
+                ['account_id' => $accounts[0]->id, 'debit' => 0, 'credit' => 0],
+                ['account_id' => $accounts[1]->id, 'debit' => 0, 'credit' => 0],
+            ],
+        ], $this->admin);
+    }
+
     public function test_journal_entry_must_balance_before_posting(): void
     {
         $accounts = Account::active()->take(2)->get();
@@ -34,12 +70,14 @@ class JournalEntryTest extends TestCase
             'transaction_date' => now()->toDateString(),
             'lines' => [
                 ['account_id' => $accounts[0]->id, 'debit' => 100, 'credit' => 0],
-                ['account_id' => $accounts[1]->id, 'debit' => 0, 'credit' => 50],
+                ['account_id' => $accounts[1]->id, 'debit' => 0, 'credit' => 100],
             ],
         ], $this->admin);
 
+        $entry->lines()->where('credit', '>', 0)->update(['credit' => 50]);
+
         $this->expectException(\InvalidArgumentException::class);
-        $this->service->post($entry, $this->admin);
+        $this->service->post($entry->fresh(), $this->admin);
     }
 
     public function test_journal_entry_supports_multiple_line_items(): void
@@ -105,5 +143,35 @@ class JournalEntryTest extends TestCase
 
         $reversal = $this->service->reverse($entry->fresh(), $manager);
         $this->assertNotNull($reversal);
+    }
+
+    public function test_journal_entry_can_reference_source_document(): void
+    {
+        $accounts = Account::active()->take(2)->get();
+        $expense = \App\Models\Expense::factory()->create();
+
+        $entry = $this->service->create([
+            'transaction_date' => now()->toDateString(),
+            'referenceable' => $expense,
+            'lines' => [
+                [
+                    'account_id' => $accounts[0]->id,
+                    'debit' => 100,
+                    'credit' => 0,
+                    'referenceable' => $expense,
+                ],
+                ['account_id' => $accounts[1]->id, 'debit' => 0, 'credit' => 100],
+            ],
+        ], $this->admin);
+
+        $entry->refresh()->load(['referenceable', 'lines.referenceable']);
+
+        $this->assertTrue($entry->referenceable->is($expense));
+        $this->assertTrue($entry->lines->first()->referenceable->is($expense));
+        $this->assertDatabaseHas('journal_entries', [
+            'id' => $entry->id,
+            'referenceable_type' => Expense::class,
+            'referenceable_id' => $expense->id,
+        ]);
     }
 }

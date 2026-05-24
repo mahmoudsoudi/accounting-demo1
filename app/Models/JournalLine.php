@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class JournalLine extends Model
 {
@@ -14,6 +15,8 @@ class JournalLine extends Model
         'debit',
         'credit',
         'line_order',
+        'referenceable_type',
+        'referenceable_id',
     ];
 
     protected function casts(): array
@@ -32,5 +35,10 @@ class JournalLine extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function referenceable(): MorphTo
+    {
+        return $this->morphTo();
     }
 }
