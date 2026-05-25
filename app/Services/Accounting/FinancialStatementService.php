@@ -360,6 +360,7 @@ class FinancialStatementService
             'account' => $row['account'],
             'debit' => $balance > 0 && $row['account']->normal_balance === NormalBalance::Debit ? abs($balance) : 0,
             'credit' => $balance > 0 && $row['account']->normal_balance === NormalBalance::Credit ? abs($balance) : ($balance < 0 ? abs($balance) : 0),
+            'balance' => $balance,
         ];
     }
 

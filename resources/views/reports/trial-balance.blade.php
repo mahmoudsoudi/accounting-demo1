@@ -31,6 +31,7 @@
                     <th>{{ __('Account') }}</th>
                     <th class="text-end">{{ __('Debit') }}</th>
                     <th class="text-end">{{ __('Credit') }}</th>
+                    <th class="text-end">{{ __('Balance') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -44,9 +45,10 @@
                     </td>
                     <td class="text-end">{{ number_format($row['debit'], 2) }}</td>
                     <td class="text-end">{{ number_format($row['credit'], 2) }}</td>
+                    <td class="text-end"><x-accounting-amount :amount="$row['balance']" :currency="false" /></td>
                 </tr>
                 @empty
-                <tr><td colspan="3" class="text-center text-muted py-4">{{ __('No balances for selected date.') }}</td></tr>
+                <tr><td colspan="4" class="text-center text-muted py-4">{{ __('No balances for selected date.') }}</td></tr>
                 @endforelse
             </tbody>
             @if($rows->isNotEmpty())
@@ -55,6 +57,16 @@
                     <th>{{ __('Totals') }}</th>
                     <th class="text-end">{{ number_format($totalDr, 2) }}</th>
                     <th class="text-end">{{ number_format($totalCr, 2) }}</th>
+                    <th></th>
+                </tr>
+                <tr @class(['table-success' => abs($totalDr - $totalCr) < 0.01, 'table-danger' => abs($totalDr - $totalCr) >= 0.01])>
+                    <th colspan="4" class="text-center">
+                        @if(abs($totalDr - $totalCr) < 0.01)
+                            {{ __('Trial balance is balanced.') }}
+                        @else
+                            {{ __('Trial balance is not balanced.') }}
+                        @endif
+                    </th>
                 </tr>
             </tfoot>
             @endif
