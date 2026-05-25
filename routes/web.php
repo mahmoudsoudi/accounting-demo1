@@ -76,7 +76,7 @@ Route::middleware('auth')->group(function () {
         Route::match(['get', 'post'], '/commission', [CalculatorController::class, 'commission'])->name('commission');
     });
 
-    Route::resource('clients', ClientController::class)->only(['index', 'create', 'store']);
+    Route::resource('clients', ClientController::class)->except(['destroy']);
     Route::resource('agents', AgentController::class)->only(['index', 'create', 'store']);
     Route::resource('properties', PropertyController::class)->only(['index', 'create', 'store']);
 

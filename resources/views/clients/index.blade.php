@@ -17,16 +17,22 @@
                     <th>{{ __('Email') }}</th>
                     <th>{{ __('Phone') }}</th>
                     <th>{{ __('City') }}</th>
+                    <th class="text-end">{{ __('Trust balance') }}</th>
                     <th>{{ __('Status') }}</th>
+                    <th class="text-end">{{ __('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($clients as $client)
-                <tr>
-                    <td>{{ $client->full_name }}</td>
+                <tr class="align-middle" role="link" tabindex="0"
+                    onclick="window.location='{{ route('clients.show', $client) }}'"
+                    onkeydown="if (event.key === 'Enter') window.location='{{ route('clients.show', $client) }}'"
+                    style="cursor: pointer;">
+                    <td class="fw-medium">{{ $client->full_name }}</td>
                     <td>{{ $client->email ?? '—' }}</td>
                     <td>{{ $client->phone ?? '—' }}</td>
                     <td>{{ $client->city ?? '—' }}</td>
+                    <td class="text-end"><x-accounting-amount :amount="$client->trust_balance ?? 0" :currency="false" /></td>
                     <td>
                         @if($client->is_active ?? true)
                             <span class="badge bg-success">{{ __('Active') }}</span>
@@ -34,9 +40,13 @@
                             <span class="badge bg-secondary">{{ __('Inactive') }}</span>
                         @endif
                     </td>
+                    <td class="text-end">
+                        <a href="{{ route('clients.show', $client) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">{{ __('View') }}</a>
+                        <a href="{{ route('clients.edit', $client) }}" class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation()">{{ __('Edit') }}</a>
+                    </td>
                 </tr>
                 @empty
-                <tr><td colspan="5" class="text-center text-muted py-4">{{ __('No clients yet.') }}</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-4">{{ __('No clients yet.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
