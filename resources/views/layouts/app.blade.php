@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', __('Dashboard')) - {{ config('app.name') }}</title>
+    <title>@yield('title', __('Dashboard')) - {{ __(config('app.name')) }}</title>
     @if(in_array(app()->getLocale(), config('locales.rtl', [])))
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     @else
@@ -43,7 +43,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             @endauth
-            <a class="navbar-brand" href="{{ route('dashboard') }}">{{ config('app.name') }}</a>
+            <a class="navbar-brand" href="{{ route('dashboard') }}">{{ __(config('app.name')) }}</a>
             <div class="d-flex align-items-center gap-2 gap-md-3 ms-auto">
                 <div class="btn-group btn-group-sm">
                     @foreach(config('locales.supported', ['en', 'fr', 'ar']) as $locale)
