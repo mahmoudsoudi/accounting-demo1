@@ -32,9 +32,13 @@ class ReportController extends Controller
     {
         Gate::authorize('view-reports');
 
+        $startDate = $request->query('start_date', now()->startOfYear()->toDateString());
+        $endDate = $request->query('end_date', now()->toDateString());
+
         return view('reports.trial-balance', [
-            'rows' => $this->financials->trialBalance($request->query('as_of')),
-            'asOf' => $request->query('as_of', now()->toDateString()),
+            'rows' => $this->financials->trialBalance($endDate, $startDate),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
         ]);
     }
 
@@ -42,9 +46,13 @@ class ReportController extends Controller
     {
         Gate::authorize('view-reports');
 
+        $startDate = $request->query('start_date', now()->startOfYear()->toDateString());
+        $endDate = $request->query('end_date', now()->toDateString());
+
         return view('reports.balance-sheet', [
-            'data' => $this->financials->balanceSheet($request->query('as_of')),
-            'asOf' => $request->query('as_of', now()->toDateString()),
+            'data' => $this->financials->balanceSheet($endDate),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
         ]);
     }
 
@@ -124,26 +132,40 @@ class ReportController extends Controller
         ]);
     }
 
-    public function expenseSummary(): View
+    public function expenseSummary(Request $request): View
     {
         Gate::authorize('view-reports');
+
+        $startDate = $request->query('start_date', now()->startOfYear()->toDateString());
+        $endDate = $request->query('end_date', now()->toDateString());
 
         $summary = Expense::selectRaw('category, SUM(total) as total')
             ->where('status', 'approved')
+            ->whereDate('expense_date', '>=', $startDate)
+            ->whereDate('expense_date', '<=', $endDate)
             ->groupBy('category')
             ->get();
 
-        return view('reports.expense-summary', compact('summary'));
+        return view('reports.expense-summary', compact('summary', 'startDate', 'endDate'));
     }
 
-    public function revenueByDimension(): View
+    public function revenueByDimension(Request $request): View
     {
         Gate::authorize('view-reports');
 
+        $startDate = $request->query('start_date', now()->startOfYear()->toDateString());
+        $endDate = $request->query('end_date', now()->toDateString());
+
+        $invoiceQuery = Invoice::query()
+            ->whereDate('invoice_date', '>=', $startDate)
+            ->whereDate('invoice_date', '<=', $endDate);
+
         return view('reports.revenue-by-dimension', [
-            'byClient' => Invoice::selectRaw('client_id, SUM(total) as total')->groupBy('client_id')->with('client')->get(),
-            'byProperty' => Invoice::selectRaw('property_id, SUM(total) as total')->groupBy('property_id')->with('property')->get(),
-            'byAgent' => Invoice::selectRaw('agent_id, SUM(total) as total')->groupBy('agent_id')->with('agent')->get(),
+            'byClient' => (clone $invoiceQuery)->selectRaw('client_id, SUM(total) as total')->groupBy('client_id')->with('client')->get(),
+            'byProperty' => (clone $invoiceQuery)->selectRaw('property_id, SUM(total) as total')->groupBy('property_id')->with('property')->get(),
+            'byAgent' => (clone $invoiceQuery)->selectRaw('agent_id, SUM(total) as total')->groupBy('agent_id')->with('agent')->get(),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
         ]);
     }
 

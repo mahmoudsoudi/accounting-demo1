@@ -130,16 +130,16 @@
         <div class="card mb-3">
             <div class="card-header">{{ __('Audit trail') }}</div>
             <ul class="list-group list-group-flush small">
-                <li class="list-group-item">{{ __('Created by') }}: {{ $entry->creator?->name }}</li>
+                <li class="list-group-item">{{ __('Created by') }}: {{ $entry->creator ? __($entry->creator->name) : '—' }}</li>
                 @if($entry->posted_at)
                     <li class="list-group-item">{{ __('Posted at') }}: {{ $entry->posted_at->format('Y-m-d H:i') }}</li>
                 @endif
                 @if($entry->approver)
-                    <li class="list-group-item">{{ __('Approved by') }}: {{ $entry->approver->name }}</li>
+                    <li class="list-group-item">{{ __('Approved by') }}: {{ __($entry->approver->name) }}</li>
                     <li class="list-group-item">{{ __('Approved at') }}: {{ $entry->approved_at?->format('Y-m-d H:i') }}</li>
                 @endif
                 @if($entry->reverser)
-                    <li class="list-group-item">{{ __('Reversed by') }}: {{ $entry->reverser->name }}</li>
+                    <li class="list-group-item">{{ __('Reversed by') }}: {{ __($entry->reverser->name) }}</li>
                     <li class="list-group-item">{{ __('Reversed at') }}: {{ $entry->reversed_at?->format('Y-m-d H:i') }}</li>
                 @endif
             </ul>

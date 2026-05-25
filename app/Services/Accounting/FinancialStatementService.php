@@ -28,19 +28,30 @@ class FinancialStatementService
     /** @var list<string> */
     private const TRUST_ACCOUNT_CODES = ['1030', '2030'];
 
-    public function trialBalance(?string $asOfDate = null): Collection
+    public function trialBalance(?string $endDate = null, ?string $startDate = null): Collection
     {
-        $balances = $this->accountBalances($asOfDate);
+        return $this->accountBalances($endDate, $startDate)
+            ->map(fn (array $row) => $this->mapTrialBalanceRow($row));
+    }
 
-        return $balances->map(function ($row) {
-            $balance = $row['balance'];
+    /**
+     * @return array<int, array{debit: float, credit: float, balance: float}>
+     */
+    public function trialBalanceAmountsByAccountId(?string $endDate = null, ?string $startDate = null): array
+    {
+        return $this->accountBalances($endDate, $startDate, activeOnly: false, hideZeroBalances: false)
+            ->mapWithKeys(function (array $row) {
+                $mapped = $this->mapTrialBalanceRow($row);
 
-            return [
-                'account' => $row['account'],
-                'debit' => $balance > 0 && $row['account']->normal_balance === NormalBalance::Debit ? abs($balance) : 0,
-                'credit' => $balance > 0 && $row['account']->normal_balance === NormalBalance::Credit ? abs($balance) : ($balance < 0 ? abs($balance) : 0),
-            ];
-        });
+                return [
+                    $row['account']->id => [
+                        'debit' => $mapped['debit'],
+                        'credit' => $mapped['credit'],
+                        'balance' => $row['balance'],
+                    ],
+                ];
+            })
+            ->all();
     }
 
     public function balanceSheet(?string $asOfDate = null): array
@@ -295,11 +306,19 @@ class FinancialStatementService
         return $query->orderByDesc('transaction_date')->get();
     }
 
-    protected function accountBalances(?string $asOfDate = null, ?string $startDate = null): Collection
-    {
-        $accounts = Account::active()->orderBy('code')->get();
+    protected function accountBalances(
+        ?string $asOfDate = null,
+        ?string $startDate = null,
+        bool $activeOnly = true,
+        bool $hideZeroBalances = true,
+    ): Collection {
+        $accountsQuery = Account::query()->orderBy('code');
 
-        return $accounts->map(function (Account $account) use ($asOfDate, $startDate) {
+        if ($activeOnly) {
+            $accountsQuery->active();
+        }
+
+        return $accountsQuery->get()->map(function (Account $account) use ($asOfDate, $startDate) {
             $query = JournalLine::query()
                 ->where('account_id', $account->id)
                 ->whereHas('journalEntry', function ($q) use ($asOfDate, $startDate) {
@@ -325,7 +344,23 @@ class FinancialStatementService
                 'credits' => $credits,
                 'balance' => $balance,
             ];
-        })->filter(fn ($row) => abs($row['balance']) > 0.001 || abs($row['debits']) > 0 || abs($row['credits']) > 0);
+        })->when(
+            $hideZeroBalances,
+            fn (Collection $rows) => $rows->filter(
+                fn ($row) => abs($row['balance']) > 0.001 || abs($row['debits']) > 0 || abs($row['credits']) > 0
+            )
+        );
+    }
+
+    protected function mapTrialBalanceRow(array $row): array
+    {
+        $balance = $row['balance'];
+
+        return [
+            'account' => $row['account'],
+            'debit' => $balance > 0 && $row['account']->normal_balance === NormalBalance::Debit ? abs($balance) : 0,
+            'credit' => $balance > 0 && $row['account']->normal_balance === NormalBalance::Credit ? abs($balance) : ($balance < 0 ? abs($balance) : 0),
+        ];
     }
 
     protected function filterByType(Collection $balances, AccountType $type): Collection

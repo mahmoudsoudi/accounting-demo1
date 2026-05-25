@@ -10,9 +10,13 @@
 <h1 class="h3 mb-4">{{ __('Trial Balance') }}</h1>
 
 <form method="GET" action="{{ route('reports.trial-balance') }}" class="row g-3 align-items-end mb-4">
-    <div class="col-md-4">
-        <label class="form-label" for="as_of">{{ __('As of') }}</label>
-        <input type="text" name="as_of" id="as_of" autocomplete="off" class="form-control datepicker" value="{{ $asOf }}">
+    <div class="col-md-3">
+        <label class="form-label" for="start_date">{{ __('Start date') }}</label>
+        <input type="text" name="start_date" id="start_date" autocomplete="off" class="form-control datepicker" value="{{ $startDate }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label" for="end_date">{{ __('End date') }}</label>
+        <input type="text" name="end_date" id="end_date" autocomplete="off" class="form-control datepicker" value="{{ $endDate }}">
     </div>
     <div class="col-auto">
         <button type="submit" class="btn btn-primary">{{ __('Apply') }}</button>
@@ -33,7 +37,11 @@
                 @php $totalDr = $rows->sum('debit'); $totalCr = $rows->sum('credit'); @endphp
                 @forelse($rows as $row)
                 <tr>
-                    <td>{{ $row['account']->full_name }}</td>
+                    <td>
+                        <a href="{{ route('accounts.show', $row['account']) }}" class="text-decoration-none">
+                            {{ $row['account']->full_name }}
+                        </a>
+                    </td>
                     <td class="text-end">{{ number_format($row['debit'], 2) }}</td>
                     <td class="text-end">{{ number_format($row['credit'], 2) }}</td>
                 </tr>

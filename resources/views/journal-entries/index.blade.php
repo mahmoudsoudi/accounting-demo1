@@ -30,7 +30,7 @@
                     <td>{{ $entry->transaction_date->format('Y-m-d') }}</td>
                     <td><span class="badge bg-secondary">{{ $entry->status->label() }}</span></td>
                     <td>{{ $entry->lines->count() }}</td>
-                    <td>{{ $entry->creator?->name }}</td>
+                    <td>{{ $entry->creator ? __($entry->creator->name) : '—' }}</td>
                     <td class="text-end">
                         <a href="{{ route('journal-entries.show', $entry) }}" class="btn btn-sm btn-outline-primary">{{ __('View') }}</a>
                     </td>

@@ -17,8 +17,11 @@ class AccountController extends Controller
     public function index(): View
     {
         $accounts = Account::with('parent')->orderBy('code')->get();
+        $fiscalStart = now()->startOfYear()->toDateString();
+        $fiscalEnd = now()->toDateString();
+        $balances = $this->financials->trialBalanceAmountsByAccountId($fiscalEnd, $fiscalStart);
 
-        return view('accounts.index', compact('accounts'));
+        return view('accounts.index', compact('accounts', 'balances', 'fiscalStart', 'fiscalEnd'));
     }
 
     public function create(): View
@@ -27,23 +30,20 @@ class AccountController extends Controller
             'parents' => Account::orderBy('code')->get(),
             'types' => \App\Enums\AccountType::cases(),
             'balances' => \App\Enums\NormalBalance::cases(),
+            'locales' => config('locales.supported'),
+            'localeLabels' => config('locales.labels'),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'code' => ['required', 'string', 'max:20', 'unique:accounts,code'],
-            'name' => ['required', 'string', 'max:255'],
-            'account_type' => ['required', 'string'],
-            'parent_id' => ['nullable', 'exists:accounts,id'],
-            'normal_balance' => ['required', 'string'],
-            'description' => ['nullable', 'string'],
-            'is_active' => ['boolean'],
-        ]);
-
+        $data = $this->validateAccount($request);
         $data['is_active'] = $request->boolean('is_active', true);
-        Account::create($data);
+
+        $account = new Account($data);
+        $account->setTranslationField('name', $data['name_translations']);
+        $account->setTranslationField('description', $data['description_translations'] ?? []);
+        $account->save();
 
         return redirect()->route('accounts.index')->with('success', __('Account created successfully.'));
     }
@@ -79,24 +79,49 @@ class AccountController extends Controller
             'parents' => Account::where('id', '!=', $account->id)->orderBy('code')->get(),
             'types' => \App\Enums\AccountType::cases(),
             'balances' => \App\Enums\NormalBalance::cases(),
+            'locales' => config('locales.supported'),
+            'localeLabels' => config('locales.labels'),
         ]);
     }
 
     public function update(Request $request, Account $account): RedirectResponse
     {
-        $data = $request->validate([
-            'code' => ['required', 'string', 'max:20', 'unique:accounts,code,'.$account->id],
-            'name' => ['required', 'string', 'max:255'],
+        $data = $this->validateAccount($request, $account);
+        $data['is_active'] = $request->boolean('is_active');
+
+        $account->fill($data);
+        $account->setTranslationField('name', $data['name_translations']);
+        $account->setTranslationField('description', $data['description_translations'] ?? []);
+        $account->save();
+
+        return redirect()->route('accounts.index')->with('success', __('Account updated successfully.'));
+    }
+
+    private function validateAccount(Request $request, ?Account $account = null): array
+    {
+        $uniqueCodeRule = $account
+            ? 'unique:accounts,code,'.$account->id
+            : 'unique:accounts,code';
+
+        $rules = [
+            'code' => ['required', 'string', 'max:20', $uniqueCodeRule],
             'account_type' => ['required', 'string'],
             'parent_id' => ['nullable', 'exists:accounts,id'],
             'normal_balance' => ['required', 'string'],
-            'description' => ['nullable', 'string'],
-            'is_active' => ['boolean'],
-        ]);
+            'name_translations' => ['required', 'array'],
+            'name_translations.en' => ['required', 'string', 'max:255'],
+            'description_translations' => ['nullable', 'array'],
+        ];
 
-        $data['is_active'] = $request->boolean('is_active');
-        $account->update($data);
+        foreach (config('locales.supported') as $locale) {
+            if ($locale === 'en') {
+                continue;
+            }
 
-        return redirect()->route('accounts.index')->with('success', __('Account updated successfully.'));
+            $rules["name_translations.{$locale}"] = ['nullable', 'string', 'max:255'];
+            $rules["description_translations.{$locale}"] = ['nullable', 'string'];
+        }
+
+        return $request->validate($rules);
     }
 }

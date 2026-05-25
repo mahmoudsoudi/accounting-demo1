@@ -10,6 +10,20 @@
 <h1 class="h3 mb-4">{{ __('Expense Summary') }}</h1>
 <p class="text-muted small">{{ __('Approved expenses only.') }}</p>
 
+<form method="GET" action="{{ route('reports.expense-summary') }}" class="row g-3 align-items-end mb-4">
+    <div class="col-md-3">
+        <label class="form-label" for="start_date">{{ __('Start date') }}</label>
+        <input type="text" name="start_date" id="start_date" autocomplete="off" class="form-control datepicker" value="{{ $startDate }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label" for="end_date">{{ __('End date') }}</label>
+        <input type="text" name="end_date" id="end_date" autocomplete="off" class="form-control datepicker" value="{{ $endDate }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">{{ __('Apply') }}</button>
+    </div>
+</form>
+
 <div class="card">
     <div class="table-responsive">
         <table class="table mb-0">

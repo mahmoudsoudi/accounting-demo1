@@ -1,5 +1,9 @@
 @php
     $accountModel = $account ?? null;
+    $locales = $locales ?? config('locales.supported');
+    $localeLabels = $localeLabels ?? config('locales.labels');
+    $nameTranslations = old('name_translations', $accountModel?->name_translations ?? ['en' => $accountModel?->getRawOriginal('name') ?? '']);
+    $descriptionTranslations = old('description_translations', $accountModel?->description_translations ?? ['en' => $accountModel?->getRawOriginal('description') ?? '']);
 @endphp
 
 <div class="row g-3">
@@ -10,10 +14,29 @@
         @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
     <div class="col-md-8">
-        <label class="form-label" for="name">{{ __('Name') }} <span class="text-danger">*</span></label>
-        <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror"
-               value="{{ old('name', $accountModel?->name) }}" required>
-        @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <label class="form-label">{{ __('Name') }} <span class="text-danger">*</span></label>
+        <ul class="nav nav-tabs" role="tablist">
+            @foreach($locales as $locale)
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @if($loop->first) active @endif" type="button"
+                            data-bs-toggle="tab" data-bs-target="#name-tab-{{ $locale }}" role="tab">
+                        {{ $localeLabels[$locale] ?? strtoupper($locale) }}
+                    </button>
+                </li>
+            @endforeach
+        </ul>
+        <div class="tab-content border border-top-0 rounded-bottom p-3 bg-white">
+            @foreach($locales as $locale)
+                <div class="tab-pane fade @if($loop->first) show active @endif" id="name-tab-{{ $locale }}" role="tabpanel">
+                    <input type="text" name="name_translations[{{ $locale }}]"
+                           class="form-control @error('name_translations.'.$locale) is-invalid @enderror"
+                           value="{{ $nameTranslations[$locale] ?? '' }}"
+                           @if($locale === 'en') required @endif
+                           dir="{{ in_array($locale, config('locales.rtl', [])) ? 'rtl' : 'ltr' }}">
+                    @error('name_translations.'.$locale)<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+            @endforeach
+        </div>
     </div>
     <div class="col-md-6">
         <label class="form-label" for="account_type">{{ __('Account type') }} <span class="text-danger">*</span></label>
@@ -28,7 +51,7 @@
         <label class="form-label" for="normal_balance">{{ __('Normal balance') }} <span class="text-danger">*</span></label>
         <select name="normal_balance" id="normal_balance" class="form-select @error('normal_balance') is-invalid @enderror" required>
             @foreach($balances as $balance)
-                <option value="{{ $balance->value }}" @selected(old('normal_balance', $accountModel?->normal_balance?->value) === $balance->value)>{{ ucfirst($balance->value) }}</option>
+                <option value="{{ $balance->value }}" @selected(old('normal_balance', $accountModel?->normal_balance?->value) === $balance->value)>{{ $balance->label() }}</option>
             @endforeach
         </select>
         @error('normal_balance')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -52,8 +75,26 @@
         </div>
     </div>
     <div class="col-12">
-        <label class="form-label" for="description">{{ __('Description') }}</label>
-        <textarea name="description" id="description" rows="3" class="form-control @error('description') is-invalid @enderror">{{ old('description', $accountModel?->description) }}</textarea>
-        @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <label class="form-label">{{ __('Description') }}</label>
+        <ul class="nav nav-tabs" role="tablist">
+            @foreach($locales as $locale)
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @if($loop->first) active @endif" type="button"
+                            data-bs-toggle="tab" data-bs-target="#description-tab-{{ $locale }}" role="tab">
+                        {{ $localeLabels[$locale] ?? strtoupper($locale) }}
+                    </button>
+                </li>
+            @endforeach
+        </ul>
+        <div class="tab-content border border-top-0 rounded-bottom p-3 bg-white">
+            @foreach($locales as $locale)
+                <div class="tab-pane fade @if($loop->first) show active @endif" id="description-tab-{{ $locale }}" role="tabpanel">
+                    <textarea name="description_translations[{{ $locale }}]" rows="3"
+                              class="form-control @error('description_translations.'.$locale) is-invalid @enderror"
+                              dir="{{ in_array($locale, config('locales.rtl', [])) ? 'rtl' : 'ltr' }}">{{ $descriptionTranslations[$locale] ?? '' }}</textarea>
+                    @error('description_translations.'.$locale)<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+            @endforeach
+        </div>
     </div>
 </div>

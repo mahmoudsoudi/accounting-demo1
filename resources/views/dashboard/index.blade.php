@@ -66,7 +66,7 @@
                             <td><a href="{{ route('journal-entries.show', $entry) }}">{{ $entry->reference_number }}</a></td>
                             <td>{{ $entry->transaction_date->format('Y-m-d') }}</td>
                             <td><span class="badge bg-secondary">{{ $entry->status->label() }}</span></td>
-                            <td>{{ $entry->creator?->name }}</td>
+                            <td>{{ $entry->creator ? __($entry->creator->name) : '—' }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="4" class="text-center text-muted">{{ __('No journal entries yet.') }}</td></tr>

@@ -10,14 +10,19 @@
 <h1 class="h3 mb-4">{{ __('Balance Sheet') }}</h1>
 
 <form method="GET" action="{{ route('reports.balance-sheet') }}" class="row g-3 align-items-end mb-4">
-    <div class="col-md-4">
-        <label class="form-label" for="as_of">{{ __('As of') }}</label>
-        <input type="text" name="as_of" id="as_of" autocomplete="off" class="form-control datepicker" value="{{ $asOf }}">
+    <div class="col-md-3">
+        <label class="form-label" for="start_date">{{ __('Start date') }}</label>
+        <input type="text" name="start_date" id="start_date" autocomplete="off" class="form-control datepicker" value="{{ $startDate }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label" for="end_date">{{ __('End date') }}</label>
+        <input type="text" name="end_date" id="end_date" autocomplete="off" class="form-control datepicker" value="{{ $endDate }}">
     </div>
     <div class="col-auto">
         <button type="submit" class="btn btn-primary">{{ __('Apply') }}</button>
     </div>
 </form>
+<p class="text-muted small">{{ __('Balances are calculated as of the end date.') }}</p>
 
 <div class="row g-4">
     <div class="col-lg-4">

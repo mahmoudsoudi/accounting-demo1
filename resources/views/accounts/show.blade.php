@@ -34,7 +34,7 @@
                 </li>
                 <li class="list-group-item">
                     <strong>{{ __('Normal balance') }}</strong><br>
-                    <span class="text-capitalize">{{ $account->normal_balance->value }}</span>
+                    {{ $account->normal_balance->label() }}
                 </li>
                 <li class="list-group-item">
                     <strong>{{ __('Parent account') }}</strong><br>
