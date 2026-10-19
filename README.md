@@ -2,9 +2,9 @@
 
 ## What is this for?
 
-**Accounting App in Laravel** is a full accounting dashboard for **Canadian real estate brokerages**. It gives brokerage staff a single place to record transactions, manage clients and properties, and produce financial reports using proper double-entry bookkeeping.
+**Accounting App in Laravel** is a full accounting dashboard for **accountants**. It gives accounting staff a single place to record transactions, manage clients and properties, and produce financial reports using proper double-entry bookkeeping.
 
-The goal is to provide a practical, auditable accounting system—not a mockup—tailored to brokerage workflows such as:
+The goal is to provide a practical, auditable accounting system—not a mockup—tailored to accounting workflows such as:
 
 - Commission income and agent payouts
 - Invoices, expenses, and payments (cash, bank, Stripe, credit card)
@@ -83,7 +83,7 @@ php artisan migrate:fresh --seed
 
 By default, `migrate --seed` loads only the essentials: roles, admin user, chart of accounts, and transaction templates. No clients, agents, deals, or journal history are created.
 
-To populate a **full year of sample brokerage activity** (agents, clients, properties, closed deals, rental income, expenses, and posted journal entries), use one of the options below.
+To populate a **full year of sample accounting activity** (agents, clients, properties, closed deals, rental income, expenses, and posted journal entries), use one of the options below.
 
 #### Option A — Environment variables (during migrate/seed)
 
@@ -158,7 +158,7 @@ Sign in with the default admin account. The dashboard shows key financial metric
 
 ### 2. Set up your chart of accounts
 
-Go to **Accounts** to review or edit the seeded chart of accounts (40 accounts designed for Canadian brokerages). Accounts are organized by type: assets, liabilities, equity, revenue, cost of sales, and operating expenses.
+Go to **Accounts** to review or edit the seeded chart of accounts (40 accounts designed for Canadian accountings). Accounts are organized by type: assets, liabilities, equity, revenue, cost of sales, and operating expenses.
 
 ### 3. Record transactions
 
@@ -169,7 +169,7 @@ Use any of these workflows:
 - **Invoices & expenses** — Create operational documents; managers approve expenses before they affect reporting.
 - **Payments** — Record payments with different methods (cash, bank transfer, Stripe, credit card).
 
-### 4. Manage brokerage data
+### 4. Manage accounting data
 
 Add and maintain:
 
